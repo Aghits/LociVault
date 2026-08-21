@@ -2,6 +2,18 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { Plus, Trash2, ArrowRight, BookOpen, Layers, Sparkles, Building2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface Palace {
   id: string;
@@ -15,7 +27,6 @@ export default function Home() {
   const [palaceToDelete, setPalaceToDelete] = useState<Palace | null>(null);
 
   useEffect(() => {
-    // Load from localStorage for MVP local-first persistence inside useEffect asynchronously
     const loadPalaces = () => {
       if (typeof window !== "undefined") {
         const saved = localStorage.getItem("locivault_palaces");
@@ -46,163 +57,178 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-neutral-200">
-      {/* Header */}
-      <header className="border-b border-border bg-surface px-6 py-4 sm:px-12 flex justify-between items-center shadow-xs">
-        <div className="flex items-center gap-2">
-          <span className="text-xl font-semibold tracking-tight text-neutral-900">LociVault</span>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 border border-neutral-200 font-medium">MVP</span>
+      {/* Top Navigation Bar */}
+      <header className="border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-40 px-6 py-3.5 sm:px-12 flex justify-between items-center shadow-2xs">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm shadow-xs">
+            LV
+          </div>
+          <div className="flex flex-col">
+            <span className="text-sm font-bold tracking-tight text-foreground">LociVault</span>
+            <span className="text-[10px] text-muted-foreground font-medium">Spatial Recall for Medicine</span>
+          </div>
         </div>
-        <div className="text-sm text-muted">
-          For Medical Students
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="hidden sm:inline-flex text-[10px] text-muted-foreground font-normal">
+            Local-First Mode
+          </Badge>
+          <Button asChild size="sm">
+            <Link href="/editor/new">
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              New Palace
+            </Link>
+          </Button>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-6 py-12 sm:px-12 flex flex-col gap-12">
-        
-        {/* Hero Section */}
-        <section className="flex flex-col gap-4 text-center sm:text-left py-6">
-          <h1 className="text-4xl font-bold tracking-tight text-neutral-900 sm:text-5xl leading-tight">
-            Build memory palaces <br className="hidden sm:inline" />
-            <span className="text-neutral-500 font-medium">in minutes, not hours.</span>
+      <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-10 sm:px-12 flex flex-col gap-10">
+        {/* Welcome Banner */}
+        <section className="flex flex-col gap-3">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground leading-tight">
+            Memory Palaces, <span className="text-muted-foreground font-normal">built in minutes.</span>
           </h1>
-          <p className="text-md text-muted max-w-xl leading-relaxed">
-            Generate visually distinct rooms (loci), upload your custom mnemonic images, drag-and-drop them in place, and study with spatial recall.
+          <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
+            Layout sequential loci using real interior architecture from Reddit, position high-yield mnemonic images, and study spatial associations for exams.
           </p>
         </section>
 
-        {/* Action / Generator Card */}
-        <section>
-          <div className="relative group overflow-hidden rounded-xl border border-neutral-200 bg-surface p-8 shadow-xs hover:shadow-md transition-all duration-300">
-            <div className="absolute top-0 right-0 h-40 w-40 bg-neutral-50 rounded-full translate-x-20 -translate-y-20 group-hover:scale-110 transition-transform duration-500" />
-            <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-col gap-2">
-                <h2 className="text-xl font-semibold text-neutral-900">Start a New Memory Palace</h2>
-                <p className="text-sm text-muted max-w-md">
-                  Choose a layout (e.g. Hallway, Living Room, Classroom) or scroll real Reddit interior rooms to build your palace.
-                </p>
+        {/* Quick Launch Card */}
+        <Card className="border-border bg-card shadow-xs overflow-hidden relative">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="gap-1 text-[10px]">
+                  <Building2 className="h-3 w-3" /> Architecture Stream
+                </Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  Zero Setup
+                </Badge>
               </div>
-              <Link
-                id="btn-generate-palace"
-                href="/editor/new"
-                className="inline-flex items-center justify-center h-11 px-6 font-medium text-sm text-white bg-neutral-900 rounded-lg hover:bg-neutral-800 active:bg-neutral-950 shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-neutral-200"
-              >
-                Generate Palace
-              </Link>
             </div>
-          </div>
-        </section>
+            <CardTitle className="text-lg font-bold mt-2">Generate a New Palace</CardTitle>
+            <CardDescription>
+              Pick from 36+ real Reddit interior rooms (clinics, libraries, cozy halls) or use classical layouts to start organizing your mnemonics.
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="pt-2">
+            <Button asChild size="default" className="shadow-xs">
+              <Link href="/editor/new">
+                <span>Start Creator</span>
+                <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </CardFooter>
+        </Card>
 
         {/* Saved Palaces Section */}
         <section className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold tracking-tight text-neutral-900">Your Saved Palaces</h2>
-            <span className="text-xs text-neutral-400 font-medium">{palaces.length} {palaces.length === 1 ? "palace" : "palaces"}</span>
-          </div>
-          
-          {palaces.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-neutral-300 p-12 text-center flex flex-col items-center justify-center bg-neutral-50/50">
-              <div className="h-10 w-10 rounded-full bg-neutral-100 flex items-center justify-center mb-4 text-neutral-400">
-                📚
-              </div>
-              <p className="text-sm text-neutral-600 font-medium mb-1">No palaces created yet</p>
-              <p className="text-xs text-muted max-w-xs leading-relaxed">
-                Click &quot;Generate Palace&quot; above to layout your first loci and mnemonic placements.
-              </p>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-foreground">Your Saved Palaces</h2>
+              <Badge variant="secondary" className="text-[11px] font-semibold">
+                {palaces.length}
+              </Badge>
             </div>
+            {palaces.length > 0 && (
+              <Button asChild variant="outline" size="sm">
+                <Link href="/editor/new">
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Add Palace
+                </Link>
+              </Button>
+            )}
+          </div>
+
+          {palaces.length === 0 ? (
+            <Card className="border-dashed border-border bg-muted/30 py-12 text-center flex flex-col items-center justify-center shadow-none">
+              <div className="h-12 w-12 rounded-xl bg-card border border-border flex items-center justify-center mb-3 text-muted-foreground shadow-2xs">
+                <BookOpen className="h-5 w-5" />
+              </div>
+              <h3 className="text-sm font-bold text-foreground">No palaces created yet</h3>
+              <p className="text-xs text-muted-foreground max-w-sm mt-1 leading-relaxed">
+                Click &quot;Start Creator&quot; above to select your loci rooms and position your first medical mnemonics.
+              </p>
+              <Button asChild size="sm" className="mt-5">
+                <Link href="/editor/new">Create Your First Palace</Link>
+              </Button>
+            </Card>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {palaces.map((palace) => (
-                <div
+                <Card
                   key={palace.id}
-                  className="p-5 rounded-xl border border-neutral-200 bg-surface shadow-2xs hover:border-neutral-300 hover:shadow-xs transition-all duration-200 flex flex-col justify-between h-36 relative group"
+                  className="flex flex-col justify-between hover:border-foreground/30 hover:shadow-md transition-all duration-200 group"
                 >
-                  <div className="flex justify-between items-start gap-3">
-                    <Link href={`/editor/${palace.id}`} className="flex-1">
-                      <h3 className="font-semibold text-neutral-900 group-hover:text-black transition-colors line-clamp-1">
-                        {palace.title}
-                      </h3>
-                      <p className="text-xs text-muted mt-1">{palace.lociCount} loci (locations)</p>
-                    </Link>
+                  <CardHeader className="p-5 pb-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <Link href={`/editor/${palace.id}`} className="flex-1 focus:outline-none">
+                        <CardTitle className="text-sm font-bold group-hover:text-primary transition-colors line-clamp-1">
+                          {palace.title}
+                        </CardTitle>
+                      </Link>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPalaceToDelete(palace);
+                        }}
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
+                        title="Delete memory palace"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        <span className="sr-only">Delete {palace.title}</span>
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <Badge variant="outline" className="text-[10px] gap-1 font-normal py-0">
+                        <Layers className="h-2.5 w-2.5" />
+                        {palace.lociCount} {palace.lociCount === 1 ? "room" : "rooms"}
+                      </Badge>
+                    </div>
+                  </CardHeader>
 
-                    {/* Delete Palace Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPalaceToDelete(palace);
-                      }}
-                      className="h-8 w-8 rounded-lg bg-neutral-50 hover:bg-red-50 text-neutral-400 hover:text-red-600 border border-neutral-200/60 hover:border-red-200 flex items-center justify-center text-xs transition-all opacity-80 group-hover:opacity-100 cursor-pointer shrink-0"
-                      title="Delete this memory palace"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-
-                  <div className="flex justify-between items-center text-xs text-neutral-400 pt-2 border-t border-neutral-100">
-                    <span>{new Date(palace.createdAt).toLocaleDateString()}</span>
-                    <Link
-                      href={`/editor/${palace.id}`}
-                      className="text-neutral-700 font-semibold hover:text-black flex items-center gap-1 group-hover:translate-x-0.5 transition-transform duration-200"
-                    >
-                      <span>Study & Edit</span>
-                      <span>&rarr;</span>
-                    </Link>
-                  </div>
-                </div>
+                  <CardFooter className="p-5 pt-0 flex justify-between items-center text-xs text-muted-foreground border-t border-border/40 mt-3">
+                    <span className="text-[11px]">{new Date(palace.createdAt).toLocaleDateString()}</span>
+                    <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs font-semibold">
+                      <Link href={`/editor/${palace.id}`}>
+                        <span>Study</span>
+                        <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
               ))}
             </div>
           )}
         </section>
       </main>
 
-      {/* Delete Confirmation Modal */}
-      {palaceToDelete && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
-          onClick={() => setPalaceToDelete(null)}
-        >
-          <div
-            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-neutral-200 flex flex-col gap-4 relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-lg shrink-0">
-                🗑️
-              </div>
-              <div className="flex flex-col">
-                <h3 className="text-base font-bold text-neutral-900">Delete Memory Palace?</h3>
-                <p className="text-xs text-muted">This action cannot be undone.</p>
-              </div>
-            </div>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={Boolean(palaceToDelete)} onOpenChange={(open) => !open && setPalaceToDelete(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Memory Palace?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong className="text-foreground">&quot;{palaceToDelete?.title}&quot;</strong>? This action will permanently remove all loci and positioned mnemonics.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPalaceToDelete(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" size="sm" onClick={confirmDelete}>
+              Delete Palace
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-            <p className="text-sm text-neutral-700 bg-neutral-50 p-3 rounded-xl border border-neutral-200/70">
-              Are you sure you want to delete <strong className="text-neutral-900">&quot;{palaceToDelete.title}&quot;</strong>?
-            </p>
-
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-neutral-100">
-              <button
-                type="button"
-                onClick={() => setPalaceToDelete(null)}
-                className="h-9 px-4 rounded-lg border border-neutral-200 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                className="h-9 px-4 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 active:bg-red-800 transition-colors shadow-xs cursor-pointer"
-              >
-                Delete Palace
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Footer */}
-      <footer className="border-t border-border py-6 px-6 sm:px-12 mt-auto text-center text-xs text-neutral-400 bg-surface">
-        <p>&copy; {new Date().getFullYear()} LociVault. Designed for calm, distraction-free studying.</p>
+      {/* Clean Footer */}
+      <footer className="border-t border-border py-6 px-6 sm:px-12 mt-auto text-center text-xs text-muted-foreground bg-card">
+        <p>&copy; {new Date().getFullYear()} LociVault &middot; Calm, distraction-free spatial learning.</p>
       </footer>
     </div>
   );

@@ -4,9 +4,15 @@
 import React, { useState, useEffect } from "react";
 import { useRouter as useAppRouter } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, ArrowRight, Check, Sparkles, Building2, BookOpen, Layers } from "lucide-react";
 import { LOCI_TEMPLATES } from "@/data/lociTemplates";
 import { RoomItem } from "@/data/redditRooms";
 import { getSafeImageUrl } from "@/lib/imageUtils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export default function NewPalace() {
   const router = useAppRouter();
@@ -117,107 +123,106 @@ export default function NewPalace() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-neutral-200 pb-28">
-      {/* Header */}
-      <header className="border-b border-border bg-surface px-6 py-4 sm:px-12 flex justify-between items-center shrink-0 sticky top-0 z-30 backdrop-blur-md bg-surface/90">
-        <div className="flex items-center gap-2">
-          <Link href="/" className="text-xl font-semibold tracking-tight text-neutral-900 hover:text-black">
-            LociVault
-          </Link>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 border border-neutral-200 font-medium">
-            New Palace
-          </span>
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-neutral-200 pb-32">
+      {/* Top Header */}
+      <header className="border-b border-border bg-card/80 backdrop-blur-md px-6 py-3.5 sm:px-12 flex justify-between items-center shrink-0 sticky top-0 z-30 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <Button asChild variant="ghost" size="icon" className="h-8 w-8">
+            <Link href="/">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="sr-only">Back to Dashboard</span>
+            </Link>
+          </Button>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold tracking-tight text-foreground">New Memory Palace</span>
+            <Badge variant="secondary" className="text-[10px] hidden sm:inline-flex">
+              Builder
+            </Badge>
+          </div>
         </div>
-        <Link href="/" className="text-sm text-neutral-500 hover:text-neutral-800 transition-colors">
-          Back to Dashboard
-        </Link>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/">Cancel</Link>
+        </Button>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-8 flex flex-col gap-7">
-        <div className="flex flex-col gap-1.5">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900">
-            Create Memory Palace
+      {/* Main Content Form */}
+      <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-8 flex flex-col gap-8">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            Configure Your Palace
           </h1>
-          <p className="text-sm text-muted">
-            Scroll through real rooms from Reddit (`inside_mps`) and tap the ones you want as your sequential memory spots.
+          <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+            Name your subject, select distinct loci rooms, and jump straight into pinning your visual mnemonics.
           </p>
         </div>
 
-        <form onSubmit={handleGenerate} className="flex flex-col gap-7">
-          {/* Palace Title */}
+        <form onSubmit={handleGenerate} className="flex flex-col gap-8">
+          {/* Palace Title Input */}
           <div className="flex flex-col gap-2">
-            <label htmlFor="palace-title" className="text-xs font-bold uppercase tracking-wider text-neutral-600">
-              Palace Name / Subject
+            <label htmlFor="palace-title" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Palace Name / Medical Topic
             </label>
-            <input
+            <Input
               id="palace-title"
               type="text"
-              placeholder="e.g. Pharmacology: Autonomic Nervous System"
+              placeholder="e.g. Pharmacology: Autonomic Nervous System & Beta Blockers"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full h-11 px-3.5 bg-surface border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 transition-all duration-200"
+              className="h-10 text-sm bg-card"
             />
           </div>
 
-          {/* Mode Switcher */}
-          <div className="flex items-center gap-2 border-b border-neutral-200 pb-3">
-            <button
-              type="button"
-              onClick={() => setMode("reddit")}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                mode === "reddit"
-                  ? "bg-neutral-900 text-white shadow-xs"
-                  : "text-neutral-600 hover:bg-neutral-100"
-              }`}
-            >
-              <span>🌟</span>
-              <span>Scroll Reddit `inside_mps` Rooms ({redditRooms.length})</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-white/20">Live Feed</span>
-            </button>
+          {/* Mode Switcher Tabs */}
+          <Tabs
+            value={mode}
+            onValueChange={(val) => setMode(val as "reddit" | "template")}
+            className="w-full flex flex-col gap-6"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-3">
+              <TabsList className="h-10 p-1 bg-secondary/80">
+                <TabsTrigger value="reddit" className="gap-2 text-xs font-semibold">
+                  <Building2 className="h-3.5 w-3.5" />
+                  <span>Reddit inside_mps Stream</span>
+                  <Badge variant="outline" className="text-[9px] py-0 px-1 font-normal bg-card">
+                    {redditRooms.length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="template" className="gap-2 text-xs font-semibold">
+                  <BookOpen className="h-3.5 w-3.5" />
+                  <span>Curated Layouts</span>
+                </TabsTrigger>
+              </TabsList>
 
-            <button
-              type="button"
-              onClick={() => setMode("template")}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                mode === "template"
-                  ? "bg-neutral-900 text-white shadow-xs"
-                  : "text-neutral-600 hover:bg-neutral-100"
-              }`}
-            >
-              <span>🏛️</span>
-              <span>Classic Curated Themes</span>
-            </button>
-          </div>
+              {mode === "reddit" && selectedRooms.length > 0 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedRooms([])}
+                  className="text-xs text-muted-foreground hover:text-destructive self-start sm:self-auto h-7 px-2"
+                >
+                  Clear Selection ({selectedRooms.length})
+                </Button>
+              )}
+            </div>
 
-          {/* Section A: Scrollable Reddit inside_mps Gallery */}
-          {mode === "reddit" && (
-            <div className="flex flex-col gap-5">
+            {/* Section A: Scrollable Reddit inside_mps Gallery */}
+            <TabsContent value="reddit" className="flex flex-col gap-4 mt-0">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-bold text-neutral-900">
-                    Scroll & Pick Your Locations ({selectedRooms.length} selected)
+                  <h2 className="text-sm font-bold text-foreground">
+                    Select Your Loci Sequence ({selectedRooms.length} selected)
                   </h2>
-                  <p className="text-xs text-muted">
-                    Tap any room to toggle it in your sequential memory journey.
+                  <p className="text-xs text-muted-foreground">
+                    Tap any room to toggle it in your spatial walkthrough order.
                   </p>
                 </div>
-
-                {selectedRooms.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRooms([])}
-                    className="text-xs text-neutral-400 hover:text-red-500 transition-colors cursor-pointer"
-                  >
-                    Clear Selection
-                  </button>
-                )}
               </div>
 
               {isLoadingRooms ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-8">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4">
                   {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="h-48 rounded-2xl bg-neutral-100 animate-pulse border border-neutral-200/60" />
+                    <Card key={i} className="h-48 bg-muted/40 animate-pulse border-border shadow-none" />
                   ))}
                 </div>
               ) : (
@@ -230,10 +235,10 @@ export default function NewPalace() {
                       <div
                         key={room.id}
                         onClick={() => toggleRoomSelection(room)}
-                        className={`group relative rounded-2xl border overflow-hidden transition-all duration-200 cursor-pointer h-52 sm:h-56 flex flex-col justify-end p-3 ${
+                        className={`group relative rounded-xl border overflow-hidden transition-all duration-200 cursor-pointer h-52 sm:h-56 flex flex-col justify-end p-3.5 select-none ${
                           isSelected
-                            ? "border-neutral-900 ring-3 ring-neutral-900 shadow-lg scale-[1.02]"
-                            : "border-neutral-200 hover:border-neutral-400 bg-neutral-100 shadow-2xs hover:shadow-md"
+                            ? "border-primary ring-2 ring-primary shadow-md scale-[1.01]"
+                            : "border-border hover:border-foreground/40 bg-card shadow-2xs hover:shadow-sm"
                         }`}
                       >
                         <img
@@ -243,25 +248,25 @@ export default function NewPalace() {
                           className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                           loading="lazy"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none" />
 
                         {/* Selection Badge with Order Number */}
-                        <div className="absolute top-2.5 right-2.5">
+                        <div className="absolute top-2.5 right-2.5 z-10">
                           {isSelected ? (
-                            <span className="h-7 w-7 rounded-full bg-neutral-900 text-white text-xs font-bold flex items-center justify-center shadow-md ring-2 ring-white">
+                            <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center shadow-md ring-2 ring-card">
                               {selectedIndex + 1}
                             </span>
                           ) : (
-                            <span className="h-6 w-6 rounded-full bg-black/40 text-white/70 text-xs font-medium flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs">
+                            <span className="h-6 w-6 rounded-full bg-black/40 text-white/80 text-xs font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs">
                               +
                             </span>
                           )}
                         </div>
 
                         {/* Room Title & Subreddit */}
-                        <div className="relative z-10 flex flex-col gap-0.5">
+                        <div className="relative z-10 flex flex-col gap-0.5 pointer-events-none">
                           {room.subreddit && (
-                            <span className="text-[10px] text-neutral-300 font-semibold uppercase tracking-wider truncate">
+                            <span className="text-[10px] text-white/70 font-semibold tracking-wider truncate">
                               {room.subreddit}
                             </span>
                           )}
@@ -274,62 +279,70 @@ export default function NewPalace() {
                   })}
                 </div>
               )}
-            </div>
-          )}
+            </TabsContent>
 
-          {/* Section B: Classic Curated Themes */}
-          {mode === "template" && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {LOCI_TEMPLATES.map((tpl) => (
-                <button
-                  key={tpl.id}
-                  type="button"
-                  onClick={() => setSelectedTemplateId(tpl.id)}
-                  className={`p-5 rounded-2xl border text-left flex flex-col gap-3 transition-all duration-200 cursor-pointer ${
-                    selectedTemplateId === tpl.id
-                      ? "border-neutral-900 bg-white shadow-xs ring-2 ring-neutral-100"
-                      : "border-neutral-200 bg-white hover:border-neutral-300"
-                  }`}
-                >
-                  <div className="flex justify-between items-center w-full">
-                    <span className="text-2xl">{tpl.icon}</span>
-                    {selectedTemplateId === tpl.id && (
-                      <span className="text-xs font-semibold px-2 py-0.5 bg-neutral-900 text-white rounded-md">
-                        Selected
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-neutral-900 text-md">{tpl.title}</h3>
-                    <p className="text-xs text-muted mt-1 leading-relaxed">{tpl.description}</p>
-                  </div>
-                  <div className="text-xs text-neutral-400 border-t border-neutral-100 pt-2 mt-auto w-full">
-                    Generates {tpl.loci.length} distinct locations
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+            {/* Section B: Curated Classic Themes */}
+            <TabsContent value="template" className="grid gap-4 sm:grid-cols-2 mt-0">
+              {LOCI_TEMPLATES.map((tpl) => {
+                const isSelected = selectedTemplateId === tpl.id;
+                return (
+                  <Card
+                    key={tpl.id}
+                    onClick={() => setSelectedTemplateId(tpl.id)}
+                    className={`cursor-pointer transition-all ${
+                      isSelected
+                        ? "border-primary ring-2 ring-primary shadow-xs"
+                        : "hover:border-foreground/40 shadow-2xs"
+                    }`}
+                  >
+                    <CardHeader className="p-5">
+                      <div className="flex justify-between items-center">
+                        <span className="text-2xl">{tpl.icon}</span>
+                        {isSelected && (
+                          <Badge variant="default" className="text-[10px] gap-1">
+                            <Check className="h-3 w-3" /> Selected
+                          </Badge>
+                        )}
+                      </div>
+                      <CardTitle className="text-base font-bold mt-2">{tpl.title}</CardTitle>
+                      <CardDescription>{tpl.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-5 pt-0">
+                      <div className="text-xs text-muted-foreground border-t border-border pt-3 flex items-center gap-1.5">
+                        <Layers className="h-3.5 w-3.5" />
+                        <span>Generates {tpl.loci.length} distinct sequential rooms</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </TabsContent>
+          </Tabs>
 
-          {/* Sticky Bottom Action Bar */}
-          <div className="fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md border-t border-border px-6 py-3.5 shadow-lg flex items-center justify-between max-w-5xl mx-auto rounded-t-2xl sm:bottom-4 sm:border sm:rounded-2xl">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-neutral-900">
-                {mode === "reddit" ? `${selectedRooms.length} Rooms Chosen` : "5 Locations Template"}
-              </span>
-              {mode === "reddit" && selectedRooms.length === 0 && (
-                <span className="text-xs text-amber-600 font-medium">Select at least 1 room</span>
-              )}
-            </div>
+          {/* Sticky Bottom Dock */}
+          <div className="fixed bottom-0 left-0 right-0 z-40 bg-card/90 backdrop-blur-md border-t border-border p-4 shadow-lg">
+            <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-foreground">
+                  {mode === "reddit" ? `${selectedRooms.length} Locations Selected` : "Curated Preset Template"}
+                </span>
+                {mode === "reddit" && selectedRooms.length === 0 && (
+                  <Badge variant="destructive" className="text-[10px]">
+                    Pick at least 1 room
+                  </Badge>
+                )}
+              </div>
 
-            <button
-              type="submit"
-              disabled={mode === "reddit" && selectedRooms.length === 0}
-              className="h-10 px-6 bg-neutral-900 text-white rounded-xl font-bold text-xs hover:bg-neutral-800 active:bg-neutral-950 disabled:opacity-50 shadow-xs transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <span>Generate Palace</span>
-              <span className="text-xs opacity-70">&rarr;</span>
-            </button>
+              <Button
+                type="submit"
+                disabled={mode === "reddit" && selectedRooms.length === 0}
+                size="default"
+                className="shadow-sm"
+              >
+                <span>Generate Palace</span>
+                <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         </form>
       </main>

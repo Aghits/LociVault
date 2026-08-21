@@ -7,6 +7,36 @@ import Link from "next/link";
 import ImageSearchModal from "@/components/ImageSearchModal";
 import RoomSearchModal from "@/components/RoomSearchModal";
 import { getSafeImageUrl } from "@/lib/imageUtils";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  ArrowLeft,
+  Save,
+  Trash2,
+  Plus,
+  Search,
+  Upload,
+  Image as ImageIcon,
+  FileText,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Layers,
+  Sparkles,
+  X,
+} from "lucide-react";
 
 interface Mnemonic {
   id: string;
@@ -146,92 +176,123 @@ export default function PalaceEditor() {
     Promise.resolve().then(initializeData);
   }, [id, router]);
 
-  // Handle Mnemonic image upload
-  const handleUploadMnemonic = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Save changes back to localStorage
+  const handleSave = () => {
+    if (!palace) return;
+    setIsSaving(true);
+    try {
+      const saved = localStorage.getItem("locivault_palaces");
+      if (saved) {
+        const list = JSON.parse(saved) as Palace[];
+        const index = list.findIndex((p) => p.id === palace.id);
+        if (index !== -1) {
+          list[index] = palace;
+          localStorage.setItem("locivault_palaces", JSON.stringify(list));
+          setSaveStatus("saved");
+        } else {
+          setSaveStatus("error");
+        }
+      } else {
+        setSaveStatus("error");
+      }
+    } catch (e) {
+      console.error(e);
+      setSaveStatus("error");
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveStatus("idle"), 3000);
+    }
+  };
+
+  const handleDeleteCurrentPalace = () => {
+    if (!palace) return;
+    try {
+      const saved = localStorage.getItem("locivault_palaces");
+      if (saved) {
+        const list = JSON.parse(saved) as Palace[];
+        const updated = list.filter((p) => p.id !== palace.id);
+        localStorage.setItem("locivault_palaces", JSON.stringify(updated));
+      }
+      router.push("/");
+    } catch (err) {
+      console.error("Failed to delete palace:", err);
+    }
+  };
+
+  // Upload custom mnemonic image file
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onloadend = () => {
+    reader.onload = (uploadEvent) => {
+      const src = uploadEvent.target?.result as string;
+      if (!src) return;
+
       const newMnemonic: Mnemonic = {
-        id: `m-custom-${Date.now()}`,
+        id: `custom-${Date.now()}`,
         name: file.name.replace(/\.[^/.]+$/, ""),
-        src: reader.result as string,
+        src,
       };
 
-      const updatedLib = [newMnemonic, ...mnemonicLibrary];
-      setMnemonicLibrary(updatedLib);
-      localStorage.setItem("locivault_custom_mnemonics", JSON.stringify(updatedLib));
+      const updated = [newMnemonic, ...mnemonicLibrary];
+      setMnemonicLibrary(updated);
+      localStorage.setItem("locivault_custom_mnemonics", JSON.stringify(updated));
     };
     reader.readAsDataURL(file);
   };
 
-  const handleDeleteMnemonic = (mnemonicId: string) => {
-    const updatedLib = mnemonicLibrary.filter((m) => m.id !== mnemonicId);
-    setMnemonicLibrary(updatedLib);
-    localStorage.setItem("locivault_custom_mnemonics", JSON.stringify(updatedLib));
-    if (selectedMnemonic?.id === mnemonicId) {
-      setSelectedMnemonic(null);
-    }
-  };
-
-  // Drag-and-Drop Handlers (Dragging from Sidebar to Canvas)
-  const handleSidebarDragStart = (e: React.DragEvent, mnemonic: Mnemonic) => {
-    e.dataTransfer.setData("application/json", JSON.stringify(mnemonic));
-    setSelectedMnemonic(mnemonic);
-  };
-
-  const handleCanvasDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const placeMnemonicAtCoords = useCallback((xPercent: number, yPercent: number, mnemonic: Mnemonic) => {
-    if (!palace) return;
-
-    const newPlacement: Placement = {
-      id: `p-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      mnemonicId: mnemonic.id,
-      name: mnemonic.name,
-      src: mnemonic.src,
-      x: Math.max(2, Math.min(98, xPercent)),
-      y: Math.max(2, Math.min(98, yPercent)),
-      size: 80,
-      note: "",
-    };
-
-    const updatedLoci = [...palace.loci];
-    updatedLoci[activeLocusIndex].placements = [
-      ...(updatedLoci[activeLocusIndex].placements || []),
-      newPlacement,
-    ];
-
-    setPalace({ ...palace, loci: updatedLoci });
-    setSelectedMnemonic(null);
-    setSelectedPlacementId(newPlacement.id);
-  }, [palace, activeLocusIndex]);
-
+  // Add image chosen from online search modal
   const handleSelectOnlineImage = (
     image: { name: string; src: string },
-    addToCanvasDirectly: boolean = true
+    addToCanvasDirectly: boolean = false
   ) => {
     const newMnemonic: Mnemonic = {
-      id: `m-online-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: `online-${Date.now()}`,
       name: image.name,
       src: image.src,
     };
 
-    const updatedLib = [newMnemonic, ...mnemonicLibrary];
-    setMnemonicLibrary(updatedLib);
-    localStorage.setItem("locivault_custom_mnemonics", JSON.stringify(updatedLib));
+    const updated = [newMnemonic, ...mnemonicLibrary];
+    setMnemonicLibrary(updated);
+    localStorage.setItem("locivault_custom_mnemonics", JSON.stringify(updated));
 
     if (addToCanvasDirectly) {
       placeMnemonicAtCoords(50, 50, newMnemonic);
-    } else {
-      setSelectedMnemonic(newMnemonic);
     }
   };
 
-  // Room swap / add handler
+  // Place mnemonic at specific canvas percentage coordinates (x: 0-100, y: 0-100)
+  const placeMnemonicAtCoords = useCallback(
+    (x: number, y: number, mnemonic: Mnemonic) => {
+      if (!palace) return;
+
+      const placementId = `placement-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+      const newPlacement: Placement = {
+        id: placementId,
+        mnemonicId: mnemonic.id,
+        name: mnemonic.name,
+        src: mnemonic.src,
+        x: Math.max(2, Math.min(98, x)),
+        y: Math.max(2, Math.min(98, y)),
+        size: 80,
+        note: "",
+      };
+
+      const updatedLoci = [...palace.loci];
+      updatedLoci[activeLocusIndex].placements = [
+        ...updatedLoci[activeLocusIndex].placements,
+        newPlacement,
+      ];
+
+      setPalace({ ...palace, loci: updatedLoci });
+      setSelectedPlacementId(placementId);
+      setSelectedMnemonic(null);
+    },
+    [palace, activeLocusIndex]
+  );
+
+  // Swap Room or Add New Room
   const handleSelectRoom = (room: { name: string; imageUrl: string }) => {
     if (!palace) return;
 
@@ -248,7 +309,7 @@ export default function PalaceEditor() {
         id: `locus-${Date.now()}`,
         name: room.name,
         imageUrl: room.imageUrl,
-        description: `Custom memory spot ${palace.loci.length + 1}`,
+        description: `Memory spot ${palace.loci.length + 1} from architecture library.`,
         placements: [],
       };
       const updatedLoci = [...palace.loci, newLocus];
@@ -259,6 +320,11 @@ export default function PalaceEditor() {
       });
       setActiveLocusIndex(updatedLoci.length - 1);
     }
+  };
+
+  const handleCanvasDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
   };
 
   const handleCanvasDrop = (e: React.DragEvent) => {
@@ -471,59 +537,14 @@ export default function PalaceEditor() {
       window.removeEventListener("touchend", handleTouchEnd);
     };
 
-    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchmove", handleTouchMove);
     window.addEventListener("touchend", handleTouchEnd);
-  };
-
-  // Palace Save Logic
-  const handleSave = () => {
-    if (!palace) return;
-    setIsSaving(true);
-    setSaveStatus("idle");
-
-    try {
-      const saved = localStorage.getItem("locivault_palaces");
-      if (saved) {
-        const list = JSON.parse(saved) as Palace[];
-        const index = list.findIndex((p) => p.id === palace.id);
-        if (index !== -1) {
-          list[index] = palace;
-          localStorage.setItem("locivault_palaces", JSON.stringify(list));
-          setSaveStatus("saved");
-        } else {
-          setSaveStatus("error");
-        }
-      } else {
-        setSaveStatus("error");
-      }
-    } catch (e) {
-      console.error(e);
-      setSaveStatus("error");
-    } finally {
-      setIsSaving(false);
-      setTimeout(() => setSaveStatus("idle"), 3000);
-    }
-  };
-
-  const handleDeleteCurrentPalace = () => {
-    if (!palace) return;
-    try {
-      const saved = localStorage.getItem("locivault_palaces");
-      if (saved) {
-        const list = JSON.parse(saved) as Palace[];
-        const updated = list.filter((p) => p.id !== palace.id);
-        localStorage.setItem("locivault_palaces", JSON.stringify(updated));
-      }
-      router.push("/");
-    } catch (err) {
-      console.error("Failed to delete palace:", err);
-    }
   };
 
   if (!palace) {
     return (
-      <div className="min-h-screen bg-background text-neutral-600 flex items-center justify-center font-sans">
-        <p className="text-sm font-medium">Loading memory palace editor...</p>
+      <div className="min-h-screen bg-background text-muted-foreground flex items-center justify-center font-sans">
+        <p className="text-sm font-medium animate-pulse">Loading memory palace editor...</p>
       </div>
     );
   }
@@ -534,224 +555,253 @@ export default function PalaceEditor() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-neutral-200">
-      {/* Header */}
-      <header className="border-b border-border bg-surface px-6 py-3.5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0 shadow-xs">
+      {/* Top Header */}
+      <header className="border-b border-border bg-card/90 backdrop-blur-md px-4 sm:px-8 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0 sticky top-0 z-30 shadow-2xs">
         <div className="flex items-center gap-3">
-          <Link href="/" className="text-xl font-semibold tracking-tight text-neutral-900 hover:text-black">
-            LociVault
-          </Link>
-          <span className="text-xs text-neutral-300">/</span>
-          <input
+          <Button asChild variant="ghost" size="icon" className="h-8 w-8">
+            <Link href="/">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="sr-only">Dashboard</span>
+            </Link>
+          </Button>
+
+          <span className="text-muted-foreground text-xs">/</span>
+
+          <Input
             id="palace-editor-title"
             type="text"
             value={palace.title}
             onChange={(e) => setPalace({ ...palace, title: e.target.value })}
-            className="text-sm font-semibold text-neutral-800 bg-transparent border-b border-transparent hover:border-neutral-300 focus:border-neutral-900 focus:outline-none px-1 py-0.5 transition-colors max-w-xs sm:max-w-md"
-            title="Edit Palace Title"
+            className="h-8 text-xs font-bold bg-transparent border-transparent hover:border-border focus:border-primary px-2 transition-all max-w-[200px] sm:max-w-xs md:max-w-md truncate"
+            title="Click to rename palace"
           />
         </div>
-        <div className="flex items-center gap-3 self-end sm:self-auto">
-          <Link href="/" className="text-xs text-neutral-500 hover:text-neutral-800 transition-colors mr-2">
-            Dashboard
-          </Link>
-          <button
-            type="button"
-            onClick={() => setShowDeleteConfirm(true)}
-            className="inline-flex items-center justify-center h-8.5 px-3 font-medium text-xs text-neutral-600 hover:text-red-600 bg-white border border-neutral-200 hover:border-red-200 rounded-md transition-colors cursor-pointer"
-            title="Delete this memory palace"
-          >
-            🗑️ Delete
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="inline-flex items-center justify-center h-8.5 px-4 font-medium text-xs text-white bg-neutral-900 rounded-md hover:bg-neutral-800 active:bg-neutral-950 disabled:opacity-50 shadow-xs transition-all duration-200 cursor-pointer"
-          >
-            {isSaving ? "Saving..." : "Save Palace"}
-          </button>
+
+        <div className="flex items-center gap-2 self-end sm:self-auto">
           {saveStatus === "saved" && (
-            <span className="text-xs text-emerald-600 font-medium">✓ Saved!</span>
+            <Badge variant="success" className="text-[10px] gap-1">
+              <Check className="h-2.5 w-2.5" /> Saved
+            </Badge>
           )}
           {saveStatus === "error" && (
-            <span className="text-xs text-red-600 font-medium">✗ Save failed</span>
+            <Badge variant="destructive" className="text-[10px]">
+              Save Failed
+            </Badge>
           )}
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            title="Delete this memory palace"
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1" />
+            <span>Delete</span>
+          </Button>
+
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+            size="sm"
+            className="h-8 text-xs shadow-xs"
+          >
+            <Save className="h-3.5 w-3.5 mr-1" />
+            <span>{isSaving ? "Saving..." : "Save Palace"}</span>
+          </Button>
         </div>
       </header>
 
       {/* Main Workspace Frame */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Mnemonic Sidebar (Drag Source) */}
-        <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-border bg-surface p-5 flex flex-col gap-4 select-none shrink-0 overflow-y-auto">
+        <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-border bg-card p-4 flex flex-col gap-4 select-none shrink-0 overflow-y-auto max-h-[35vh] md:max-h-none">
           <div className="flex flex-col gap-1">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Mnemonic Library</h2>
-            <p className="text-xs text-muted leading-relaxed">
-              Find online images or upload your own, then drag them onto the room.
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Mnemonics
+              </h2>
+              <Badge variant="secondary" className="text-[10px]">
+                {mnemonicLibrary.length}
+              </Badge>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Drag images onto the room, or tap to place.
             </p>
           </div>
 
-          {/* Search Online & Upload Buttons */}
-          <div className="flex flex-col gap-2">
-            <button
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-1.5">
+            <Button
               type="button"
               onClick={() => setIsSearchModalOpen(true)}
-              className="w-full h-9 rounded-lg border border-neutral-900 bg-neutral-900 text-white shadow-xs flex items-center justify-center gap-2 text-xs font-semibold hover:bg-neutral-800 active:bg-neutral-950 transition-colors cursor-pointer"
+              size="sm"
+              className="w-full justify-start text-xs h-8"
             >
-              <span>🔍</span>
+              <Search className="h-3.5 w-3.5 mr-2" />
               <span>Search Online Images</span>
-            </button>
+            </Button>
 
             <label
               htmlFor="mnemonic-uploader"
-              className="w-full h-8.5 rounded-lg border border-neutral-200 hover:border-neutral-300 bg-white shadow-2xs flex items-center justify-center gap-2 text-xs font-medium text-neutral-700 cursor-pointer hover:bg-neutral-50 active:bg-neutral-100 transition-colors"
+              className="w-full h-8 rounded-md border border-border hover:border-foreground/30 bg-card shadow-2xs flex items-center justify-start px-3 gap-2 text-xs font-medium text-foreground cursor-pointer hover:bg-accent transition-colors"
             >
-              <span>📤</span>
+              <Upload className="h-3.5 w-3.5 text-muted-foreground" />
               <span>Upload Custom File</span>
             </label>
             <input
               id="mnemonic-uploader"
               type="file"
               accept="image/*"
-              onChange={handleUploadMnemonic}
               className="hidden"
+              onChange={handleImageUpload}
             />
           </div>
 
-          {/* Tap-to-place helper */}
-          {selectedMnemonic && (
-            <div className="bg-neutral-900 text-white rounded-lg p-2.5 text-xs flex justify-between items-center shadow-xs">
-              <span className="truncate pr-2">Tap locus to place <strong>{selectedMnemonic.name}</strong></span>
-              <button onClick={() => setSelectedMnemonic(null)} className="text-neutral-400 hover:text-white p-0.5">✕</button>
-            </div>
-          )}
+          <Separator />
 
-          {/* Draggable Mnemonics List */}
-          <div className="flex-1 overflow-y-auto pr-1 flex flex-row md:flex-col gap-2.5 pb-2">
-            {mnemonicLibrary.map((mnemonic) => (
-              <div
-                key={mnemonic.id}
-                draggable
-                onDragStart={(e) => handleSidebarDragStart(e, mnemonic)}
-                onClick={() => setSelectedMnemonic(mnemonic)}
-                className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-grab bg-white shadow-2xs hover:shadow-xs transition-all duration-200 shrink-0 md:shrink w-44 md:w-full group ${
-                  selectedMnemonic?.id === mnemonic.id
-                    ? "border-neutral-900 ring-2 ring-neutral-100"
-                    : "border-neutral-200 hover:border-neutral-300"
-                }`}
-              >
-                <div className="relative h-11 w-11 rounded-md bg-neutral-100 overflow-hidden shrink-0 border border-neutral-100 flex items-center justify-center p-0.5">
-                  <img
-                    src={mnemonic.src}
-                    alt={mnemonic.name}
-                    referrerPolicy="no-referrer"
-                    className="h-full w-full object-contain pointer-events-none rounded"
-                  />
-                </div>
-                <div className="min-w-0 flex-1 flex flex-col">
-                  <span className="text-xs font-medium text-neutral-800 truncate leading-tight">{mnemonic.name}</span>
-                  <span className="text-[10px] text-neutral-400 mt-1 leading-none">Drag to room</span>
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteMnemonic(mnemonic.id);
+          {/* Mnemonic Item List */}
+          <div className="flex-1 flex flex-col gap-2 overflow-y-auto pr-1">
+            {mnemonicLibrary.map((m) => {
+              const isSelected = selectedMnemonic?.id === m.id;
+              return (
+                <div
+                  key={m.id}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("application/json", JSON.stringify(m));
+                    e.dataTransfer.effectAllowed = "copy";
                   }}
-                  className="text-neutral-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-xs"
-                  title="Remove mnemonic"
+                  onClick={() => setSelectedMnemonic(isSelected ? null : m)}
+                  className={`flex items-center gap-2.5 p-2 rounded-lg border text-left cursor-grab active:cursor-grabbing transition-all select-none group ${
+                    isSelected
+                      ? "border-primary bg-accent ring-1 ring-primary shadow-xs"
+                      : "border-border bg-card hover:border-foreground/30 hover:bg-secondary/40 shadow-2xs"
+                  }`}
+                  title="Drag onto room or tap to place"
                 >
-                  ✕
-                </button>
-              </div>
-            ))}
+                  <div className="h-10 w-10 rounded-md overflow-hidden bg-muted flex items-center justify-center shrink-0 border border-border/40">
+                    <img
+                      src={m.src}
+                      alt={m.name}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover pointer-events-none"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-foreground truncate">{m.name}</p>
+                    <p className="text-[10px] text-muted-foreground">Drag to room</p>
+                  </div>
+                  {isSelected && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary text-primary-foreground font-bold shrink-0">
+                      Active
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </aside>
 
-        {/* Locus Workspace Panel */}
-        <main className="flex-1 p-5 md:p-7 flex flex-col gap-4 bg-neutral-50/60 overflow-hidden">
-          {/* Locus Heading info & Controls Toolbar */}
+        {/* Center Main Room Canvas Area */}
+        <main className="flex-1 p-4 sm:p-6 flex flex-col gap-4 bg-muted/20 overflow-hidden">
+          {/* Locus Toolbar */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-neutral-900">
+                <h2 className="text-sm font-bold text-foreground">
                   Locus {activeLocusIndex + 1} of {palace.loci.length}: {activeLocus.name}
                 </h2>
-                <button
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => {
                     setRoomModalMode("swap");
                     setIsRoomModalOpen(true);
                   }}
-                  className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100 transition-colors shadow-2xs cursor-pointer flex items-center gap-1"
-                  title="Swap background room with another from Reddit inside_mps"
+                  className="h-6 px-2 text-[10px] font-semibold"
+                  title="Swap background room with another from architecture library"
                 >
-                  <span>🖼️</span>
+                  <ImageIcon className="h-3 w-3 mr-1" />
                   <span>Swap Room</span>
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setImageFit((prev) => (prev === "contain" ? "cover" : "contain"))}
-                  className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-100 transition-colors shadow-2xs cursor-pointer flex items-center gap-1"
-                  title={imageFit === "contain" ? "Switch to Fill Screen (Crop)" : "Switch to Fit Whole Room (Uncropped)"}
+                  className="h-6 px-2 text-[10px] font-semibold"
+                  title={imageFit === "contain" ? "Switch to Fill View" : "Switch to Fit View"}
                 >
-                  <span>{imageFit === "contain" ? "📐 Fit View" : "🔲 Fill View"}</span>
-                </button>
+                  <Maximize2 className="h-3 w-3 mr-1" />
+                  <span>{imageFit === "contain" ? "Fit View" : "Fill View"}</span>
+                </Button>
               </div>
-              <p className="text-xs text-muted leading-relaxed">{activeLocus.description}</p>
+              <p className="text-xs text-muted-foreground">{activeLocus.description}</p>
             </div>
 
-            {/* Selected Placement Controls (Size / Edit Note / Delete) */}
+            {/* Selected Placement Controls */}
             <div className="flex items-center gap-2 self-start sm:self-auto">
               {activePlacement && (
-                <div className="flex items-center gap-1.5 bg-white border border-neutral-200 rounded-lg px-2.5 py-1 text-xs shadow-2xs">
-                  <span className="text-neutral-500 font-medium text-[11px] truncate max-w-[90px]">{activePlacement.name}</span>
-                  <button
+                <div className="flex items-center gap-1.5 bg-card border border-border rounded-lg px-2.5 py-1 text-xs shadow-2xs">
+                  <span className="text-muted-foreground font-medium text-[11px] truncate max-w-[80px]">
+                    {activePlacement.name}
+                  </span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={() => setExpandedPlacementId(activePlacement.id)}
-                    className="px-2 py-0.5 rounded text-[10px] font-semibold bg-neutral-100 text-neutral-800 hover:bg-neutral-200 transition-colors flex items-center gap-1 cursor-pointer"
-                    title="Expand Image and Edit Note"
+                    className="h-6 px-2 text-[10px] gap-1 font-semibold"
+                    title="Edit Study Note"
                   >
-                    <span>📝</span>
+                    <FileText className="h-3 w-3" />
                     <span>Note</span>
-                  </button>
-                  <span className="w-px h-3 bg-neutral-200 mx-0.5" />
-                  <button
+                  </Button>
+                  <Separator orientation="vertical" className="h-3.5 mx-0.5" />
+                  <Button
+                    variant={activePlacement.size === 60 ? "default" : "ghost"}
+                    size="sm"
                     onClick={() => handleChangePlacementSize(activePlacement.id, 60)}
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold cursor-pointer ${
-                      (activePlacement.size || 80) === 60 ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100"
-                    }`}
+                    className="h-6 w-6 p-0 text-[10px] font-bold"
                   >
                     S
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant={(activePlacement.size || 80) === 80 ? "default" : "ghost"}
+                    size="sm"
                     onClick={() => handleChangePlacementSize(activePlacement.id, 80)}
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold cursor-pointer ${
-                      (activePlacement.size || 80) === 80 ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100"
-                    }`}
+                    className="h-6 w-6 p-0 text-[10px] font-bold"
                   >
                     M
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant={activePlacement.size === 120 ? "default" : "ghost"}
+                    size="sm"
                     onClick={() => handleChangePlacementSize(activePlacement.id, 120)}
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold cursor-pointer ${
-                      (activePlacement.size || 80) === 120 ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100"
-                    }`}
+                    className="h-6 w-6 p-0 text-[10px] font-bold"
                   >
                     L
-                  </button>
-                  <span className="w-px h-3 bg-neutral-200 mx-0.5" />
-                  <button
+                  </Button>
+                  <Separator orientation="vertical" className="h-3.5 mx-0.5" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => handleRemovePlacement(activePlacement.id)}
-                    className="text-neutral-400 hover:text-red-600 text-xs px-1 cursor-pointer"
-                    title="Remove selected image"
+                    className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    title="Remove from room"
                   >
-                    ✕
-                  </button>
+                    <X className="h-3 w-3" />
+                  </Button>
                 </div>
               )}
-              <div className="text-xs px-2.5 py-1 rounded-md bg-white text-neutral-600 border border-neutral-200 font-medium shadow-2xs">
-                {activeLocus.placements.length} {activeLocus.placements.length === 1 ? "mnemonic" : "mnemonics"} placed
-              </div>
+              <Badge variant="outline" className="text-[11px] font-medium bg-card">
+                {activeLocus.placements.length} {activeLocus.placements.length === 1 ? "placed" : "placed"}
+              </Badge>
             </div>
           </div>
 
           {/* Interactive Loci Drop Zone Canvas Container */}
-          <div className="flex-1 min-h-[350px] relative rounded-2xl border border-neutral-200 overflow-hidden bg-neutral-900/90 flex items-center justify-center p-2 select-none shadow-inner">
+          <div className="flex-1 min-h-[360px] relative rounded-2xl border border-border overflow-hidden bg-neutral-950 flex items-center justify-center p-2 select-none shadow-inner">
             {/* The Image Frame with Placements */}
             <div
               ref={canvasRef}
@@ -764,7 +814,7 @@ export default function PalaceEditor() {
                   : "w-full h-full rounded-xl overflow-hidden"
               } ${selectedMnemonic ? "cursor-crosshair" : "cursor-default"}`}
             >
-              {/* The Background Locus Image */}
+              {/* Background Locus Image */}
               <img
                 src={getSafeImageUrl(activeLocus.imageUrl)}
                 alt={activeLocus.name}
@@ -799,12 +849,12 @@ export default function PalaceEditor() {
                       setSelectedPlacementId(p.id);
                     }}
                     className={`absolute pointer-events-auto -translate-x-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing group transition-transform ${
-                      isSelected ? "ring-2 ring-neutral-900 ring-offset-2 scale-105 z-30" : "hover:scale-105 z-20"
+                      isSelected ? "ring-2 ring-primary ring-offset-2 scale-105 z-30" : "hover:scale-105 z-20"
                     }`}
                     title={`${p.name} (Click to expand & note)`}
                   >
                     {/* Plain Image Container */}
-                    <div className="w-full h-full rounded-lg overflow-hidden bg-white/95 backdrop-blur-xs p-1.5 border border-neutral-200/90 shadow-md flex items-center justify-center select-none relative">
+                    <div className="w-full h-full rounded-lg overflow-hidden bg-card/95 backdrop-blur-xs p-1.5 border border-border shadow-md flex items-center justify-center select-none relative">
                       <img
                         src={p.src}
                         alt={p.name}
@@ -812,10 +862,13 @@ export default function PalaceEditor() {
                         className="w-full h-full object-contain pointer-events-none select-none rounded"
                         draggable={false}
                       />
-                      
+
                       {/* Note Indicator Badge */}
                       {hasNote && (
-                        <span className="absolute top-1 left-1 h-3.5 w-3.5 rounded-full bg-amber-400 border border-white flex items-center justify-center text-[8px] shadow-xs" title="Has study note">
+                        <span
+                          className="absolute top-1 left-1 h-3.5 w-3.5 rounded-full bg-amber-400 border border-card flex items-center justify-center text-[8px] shadow-xs"
+                          title="Has study note"
+                        >
                           📝
                         </span>
                       )}
@@ -832,7 +885,7 @@ export default function PalaceEditor() {
                         e.stopPropagation();
                         handleRemovePlacement(p.id);
                       }}
-                      className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-white border border-neutral-300 text-neutral-600 hover:bg-red-500 hover:text-white hover:border-red-500 shadow-sm flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-all z-30"
+                      className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-card border border-border text-muted-foreground hover:bg-destructive hover:text-destructive-foreground hover:border-destructive shadow-xs flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-all z-30 cursor-pointer"
                       title="Remove from palace"
                     >
                       ✕
@@ -843,153 +896,143 @@ export default function PalaceEditor() {
             </div>
           </div>
 
-          {/* Loci Sequence Navigation bar */}
-          <div className="flex items-center justify-between shrink-0 pt-1">
-            <button
-              onClick={() => {
-                setSelectedPlacementId(null);
-                setActiveLocusIndex((i) => Math.max(0, i - 1));
-              }}
+          {/* Bottom Sequence Navigation Bar */}
+          <div className="flex items-center justify-between gap-3 bg-card border border-border rounded-xl p-2.5 shrink-0 shadow-2xs">
+            <Button
+              variant="outline"
+              size="sm"
               disabled={activeLocusIndex === 0}
-              className="inline-flex items-center justify-center h-9 px-4 font-medium text-xs text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
+              onClick={() => setActiveLocusIndex((prev) => Math.max(0, prev - 1))}
+              className="h-8 px-3 text-xs"
             >
-              &larr; Previous Locus
-            </button>
+              <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+              <span>Previous</span>
+            </Button>
 
-            {/* Indicator dots & Add Locus Button */}
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-2">
-                {palace.loci.map((_, idx) => (
+            {/* Locus Carousel Strip */}
+            <div className="flex-1 flex items-center justify-center gap-2 overflow-x-auto px-2">
+              {palace.loci.map((loc, idx) => {
+                const isActive = activeLocusIndex === idx;
+                return (
                   <button
-                    key={idx}
-                    onClick={() => {
-                      setSelectedPlacementId(null);
-                      setActiveLocusIndex(idx);
-                    }}
-                    className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
-                      idx === activeLocusIndex ? "w-6 bg-neutral-900" : "w-2.5 bg-neutral-300 hover:bg-neutral-400"
+                    key={loc.id}
+                    type="button"
+                    onClick={() => setActiveLocusIndex(idx)}
+                    className={`flex items-center gap-2 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer select-none shrink-0 ${
+                      isActive
+                        ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                        : "border-border bg-card hover:bg-accent text-foreground"
                     }`}
-                    title={`Go to Locus ${idx + 1}: ${palace.loci[idx].name}`}
-                  />
-                ))}
-              </div>
+                  >
+                    <span className="h-4 w-4 rounded-full bg-background/20 text-[10px] flex items-center justify-center">
+                      {idx + 1}
+                    </span>
+                    <span className="truncate max-w-[90px]">{loc.name}</span>
+                    {loc.placements.length > 0 && (
+                      <span className="text-[9px] opacity-80">({loc.placements.length})</span>
+                    )}
+                  </button>
+                );
+              })}
 
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setRoomModalMode("add");
                   setIsRoomModalOpen(true);
                 }}
-                className="h-8 px-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-1 ml-2"
-                title="Add another room locus from Reddit inside_mps"
+                className="h-7 px-2 text-xs font-semibold text-muted-foreground hover:text-foreground shrink-0"
+                title="Add another room to this palace"
               >
-                <span>+</span>
+                <Plus className="h-3.5 w-3.5 mr-1" />
                 <span>Add Room</span>
-              </button>
+              </Button>
             </div>
 
-            <button
-              onClick={() => {
-                setSelectedPlacementId(null);
-                setActiveLocusIndex((i) => Math.min(palace.loci.length - 1, i + 1));
-              }}
+            <Button
+              variant="outline"
+              size="sm"
               disabled={activeLocusIndex === palace.loci.length - 1}
-              className="inline-flex items-center justify-center h-9 px-4 font-medium text-xs text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
+              onClick={() => setActiveLocusIndex((prev) => Math.min(palace.loci.length - 1, prev + 1))}
+              className="h-8 px-3 text-xs"
             >
-              Next Locus &rarr;
-            </button>
+              <span>Next</span>
+              <ChevronRight className="h-3.5 w-3.5 ml-1" />
+            </Button>
           </div>
         </main>
       </div>
 
-      {/* --- EXPANDED IMAGE & NOTE MODAL --- */}
+      {/* Expanded Study Note Modal (Radix Dialog) */}
       {expandedPlacement && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6"
-          onClick={() => setExpandedPlacementId(null)}
-        >
-          <div
-            className="bg-white rounded-2xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl border border-neutral-200 flex flex-col gap-6 relative max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
-              <div className="flex flex-col gap-1 flex-1 mr-4">
-                <input
+        <Dialog open={Boolean(expandedPlacement)} onOpenChange={(open) => !open && setExpandedPlacementId(null)}>
+          <DialogContent className="max-w-xl max-h-[85vh] flex flex-col p-6 overflow-hidden">
+            <DialogHeader className="shrink-0 pb-2">
+              <div className="flex items-center gap-2">
+                <DialogTitle className="text-base font-bold">Study Mnemonic Association</DialogTitle>
+                <Badge variant="secondary" className="text-[10px]">
+                  Locus {activeLocusIndex + 1}
+                </Badge>
+              </div>
+              <DialogDescription>
+                Attach clinical indications, side effects, and vivid memory anchors to this location.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 flex flex-col sm:flex-row gap-4 overflow-y-auto py-2">
+              {/* Image Preview */}
+              <div className="sm:w-44 flex flex-col gap-2 shrink-0">
+                <div className="h-44 w-full rounded-xl overflow-hidden bg-muted border border-border p-2 flex items-center justify-center">
+                  <img
+                    src={expandedPlacement.src}
+                    alt={expandedPlacement.name}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <Input
                   type="text"
                   value={expandedPlacement.name}
                   onChange={(e) => handleUpdatePlacementName(expandedPlacement.id, e.target.value)}
-                  className="text-lg font-bold text-neutral-900 bg-transparent border-b border-transparent hover:border-neutral-300 focus:border-neutral-900 focus:outline-none px-0.5 py-0.5 transition-colors"
-                  placeholder="Mnemonic Name..."
-                />
-                <span className="text-xs text-neutral-400">
-                  Location: Locus {activeLocusIndex + 1} ({activeLocus.name})
-                </span>
-              </div>
-              <button
-                onClick={() => setExpandedPlacementId(null)}
-                className="h-8 w-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-600 flex items-center justify-center text-sm font-medium transition-colors cursor-pointer"
-                title="Close"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Modal Body: Expanded Image Preview + Note Editor */}
-            <div className="flex flex-col md:flex-row gap-6 items-stretch">
-              {/* Expanded Image Container */}
-              <div className="md:w-1/2 flex flex-col items-center justify-center bg-neutral-50 rounded-xl border border-neutral-200/80 p-4 min-h-[220px] max-h-[300px] overflow-hidden">
-                <img
-                  src={expandedPlacement.src}
-                  alt={expandedPlacement.name}
-                  referrerPolicy="no-referrer"
-                  className="max-w-full max-h-full object-contain rounded-lg shadow-xs select-none"
+                  className="h-8 text-xs font-semibold"
+                  placeholder="Mnemonic title"
                 />
               </div>
 
-              {/* Note Input Field */}
-              <div className="md:w-1/2 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="placement-note" className="text-xs font-bold uppercase tracking-wider text-neutral-600 flex items-center gap-1.5">
-                    <span>📝</span>
-                    <span>Study Notes & Memory Hook</span>
-                  </label>
-                  <span className="text-[11px] text-neutral-400">Auto-saved</span>
-                </div>
-
+              {/* Note Textarea */}
+              <div className="flex-1 flex flex-col gap-2">
+                <label className="text-xs font-semibold text-foreground">
+                  Study Notes & Clinical Recall Cues
+                </label>
                 <textarea
-                  id="placement-note"
-                  rows={6}
                   value={expandedPlacement.note || ""}
                   onChange={(e) => handleUpdatePlacementNote(expandedPlacement.id, e.target.value)}
-                  placeholder="e.g. Mechanism: Competitively blocks beta-1 adrenergic receptors in cardiac tissue. Lowers HR and BP. Side effects: Bradycardia, fatigue."
-                  className="w-full flex-1 p-3.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs sm:text-sm text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 transition-all resize-none leading-relaxed"
+                  placeholder="e.g. Mechanism: Competitively blocks beta-1 adrenergic receptors in cardiac tissue. Lowers HR & BP. Side effects: Bradycardia, bronchospasm in asthma."
+                  className="w-full flex-1 min-h-[140px] p-3 bg-muted/40 border border-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground focus:bg-card focus:outline-none focus:ring-2 focus:ring-ring transition-all resize-none leading-relaxed"
                 />
-
-                <p className="text-[11px] text-muted">
-                  Tip: Write vivid sensory associations to strengthen your spatial memory recall.
+                <p className="text-[11px] text-muted-foreground">
+                  Tip: Use sensory details (smell, color, movement) to cement long-term memory.
                 </p>
               </div>
             </div>
 
-            {/* Modal Footer Actions */}
-            <div className="flex items-center justify-between border-t border-neutral-100 pt-4 mt-1">
-              <button
+            <DialogFooter className="flex items-center justify-between sm:justify-between border-t border-border pt-4 mt-2">
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => handleRemovePlacement(expandedPlacement.id)}
-                className="text-xs font-medium text-red-600 hover:text-red-700 px-2 py-1 transition-colors cursor-pointer"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 text-xs"
               >
-                Delete from Palace
-              </button>
-
-              <button
-                onClick={() => setExpandedPlacementId(null)}
-                className="h-9 px-5 bg-neutral-900 text-white rounded-lg text-xs font-medium hover:bg-neutral-800 active:bg-neutral-950 transition-colors shadow-xs cursor-pointer"
-              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                <span>Delete from Palace</span>
+              </Button>
+              <Button size="sm" onClick={() => setExpandedPlacementId(null)}>
                 Done
-              </button>
-            </div>
-          </div>
-        </div>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Online Image Search Modal */}
@@ -1007,49 +1050,25 @@ export default function PalaceEditor() {
         title={roomModalMode === "swap" ? "Change Locus Room" : "Add New Palace Room"}
       />
 
-      {/* Delete Palace Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
-          onClick={() => setShowDeleteConfirm(false)}
-        >
-          <div
-            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-neutral-200 flex flex-col gap-4 relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-lg shrink-0">
-                🗑️
-              </div>
-              <div className="flex flex-col">
-                <h3 className="text-base font-bold text-neutral-900">Delete Memory Palace?</h3>
-                <p className="text-xs text-muted">This action cannot be undone.</p>
-              </div>
-            </div>
-
-            <p className="text-sm text-neutral-700 bg-neutral-50 p-3 rounded-xl border border-neutral-200/70">
-              Are you sure you want to delete <strong className="text-neutral-900">&quot;{palace.title}&quot;</strong>?
-            </p>
-
-            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-neutral-100">
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(false)}
-                className="h-9 px-4 rounded-lg border border-neutral-200 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteCurrentPalace}
-                className="h-9 px-4 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 active:bg-red-800 transition-colors shadow-xs cursor-pointer"
-              >
-                Delete Palace
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete Palace Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={(open) => !open && setShowDeleteConfirm(false)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Memory Palace?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong className="text-foreground">&quot;{palace.title}&quot;</strong>? This action will permanently remove all loci and positioned mnemonics.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleDeleteCurrentPalace}>
+              Delete Palace
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

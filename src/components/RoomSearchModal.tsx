@@ -4,6 +4,18 @@
 import React, { useState, useEffect, useRef } from "react";
 import { RoomItem } from "@/data/redditRooms";
 import { getSafeImageUrl } from "@/lib/imageUtils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Search, Building2, Link as LinkIcon } from "lucide-react";
 
 interface RoomSearchModalProps {
   isOpen: boolean;
@@ -23,7 +35,6 @@ const ROOM_SUGGESTIONS = [
   "Old Bookstore",
   "Lecture Hall",
   "Courtyard",
-  "Art Museum",
 ];
 
 export default function RoomSearchModal({
@@ -32,7 +43,7 @@ export default function RoomSearchModal({
   onSelectRoom,
   title = "Choose Memory Palace Room",
 }: RoomSearchModalProps) {
-  const [activeTab, setActiveTab] = useState<"reddit" | "search" | "url">("reddit");
+  const [activeTab, setActiveTab] = useState<"reddit" | "url">("reddit");
   const [query, setQuery] = useState("");
   const [rooms, setRooms] = useState<RoomItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -71,25 +82,12 @@ export default function RoomSearchModal({
     }
   }, [isOpen]);
 
-  // Handle ESC
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    if (isOpen) {
-      window.addEventListener("keydown", handleKeyDown);
-      return () => window.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [isOpen, onClose]);
-
   const handleTopicClick = (topic: string) => {
     setSelectedTopic(topic);
     if (topic === "inside_mps (All)") {
-      setActiveTab("reddit");
       setQuery("");
       fetchRooms("", "inside_mps");
     } else {
-      setActiveTab("search");
       setQuery(topic);
       fetchRooms(topic, "search");
     }
@@ -97,257 +95,201 @@ export default function RoomSearchModal({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
-    setActiveTab("search");
-    fetchRooms(query.trim(), "search");
+    if (!query.trim()) {
+      fetchRooms("", "inside_mps");
+    } else {
+      fetchRooms(query, "search");
+    }
   };
 
-  const handleUrlSubmit = (e: React.FormEvent) => {
+  const handlePastedUrlSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!pastedUrl.trim()) return;
-    const name = pastedName.trim() || "Custom Palace Room";
+
+    const name = pastedName.trim() || "Custom Locus Room";
     onSelectRoom({ name, imageUrl: pastedUrl.trim() });
     setPastedUrl("");
     setPastedName("");
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-2xl max-w-4xl w-full p-6 sm:p-7 shadow-2xl border border-neutral-200 flex flex-col gap-5 relative max-h-[90vh] overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-neutral-100 pb-3.5 shrink-0">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
-              <span>🏛️</span>
-              <span>{title}</span>
-            </h2>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 border border-neutral-200 font-medium">
-              Reddit r/inside_mps ({rooms.length} rooms)
-            </span>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-3xl max-h-[88vh] flex flex-col p-6 overflow-hidden">
+        <DialogHeader className="shrink-0 pb-2">
+          <div className="flex items-center gap-2">
+            <DialogTitle className="text-base font-bold">{title}</DialogTitle>
+            <Badge variant="outline" className="text-[10px]">
+              Spatial Locus
+            </Badge>
           </div>
+          <DialogDescription>
+            Select a high-resolution interior room to use as a background for your spatial memory palace.
+          </DialogDescription>
+        </DialogHeader>
 
-          <button
-            onClick={onClose}
-            className="h-8 w-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-600 flex items-center justify-center text-sm font-medium transition-colors cursor-pointer"
-            title="Close"
-          >
-            ✕
-          </button>
-        </div>
+        {/* Mode Tabs */}
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as "reddit" | "url")}
+          className="w-full flex-1 flex flex-col overflow-hidden"
+        >
+          <TabsList className="w-full grid grid-cols-2 h-9 mb-3 shrink-0">
+            <TabsTrigger value="reddit" className="text-xs font-semibold gap-1.5">
+              <Building2 className="h-3.5 w-3.5" />
+              <span>Reddit inside_mps Library</span>
+            </TabsTrigger>
+            <TabsTrigger value="url" className="text-xs font-semibold gap-1.5">
+              <LinkIcon className="h-3.5 w-3.5" />
+              <span>Custom Room URL</span>
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Tab Navigation */}
-        <div className="flex items-center gap-2 border-b border-neutral-100 pb-2 shrink-0">
-          <button
-            onClick={() => {
-              setActiveTab("reddit");
-              setSelectedTopic("inside_mps (All)");
-              fetchRooms("", "inside_mps");
-            }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-              activeTab === "reddit"
-                ? "bg-neutral-900 text-white shadow-xs"
-                : "text-neutral-600 hover:bg-neutral-100"
-            }`}
-          >
-            🌟 Scroll Reddit inside_mps Feed ({rooms.length})
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab("search");
-              setTimeout(() => inputRef.current?.focus(), 100);
-            }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-              activeTab === "search"
-                ? "bg-neutral-900 text-white shadow-xs"
-                : "text-neutral-600 hover:bg-neutral-100"
-            }`}
-          >
-            🔍 Search Room Styles
-          </button>
-          <button
-            onClick={() => setActiveTab("url")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-              activeTab === "url"
-                ? "bg-neutral-900 text-white shadow-xs"
-                : "text-neutral-600 hover:bg-neutral-100"
-            }`}
-          >
-            🔗 Paste Room Image Link
-          </button>
-        </div>
-
-        {/* Topic Suggestion Chips */}
-        {activeTab !== "url" && (
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 shrink-0 no-scrollbar">
-            <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider shrink-0 mr-1">
-              Rooms:
-            </span>
-            {ROOM_SUGGESTIONS.map((topic) => (
-              <button
-                key={topic}
-                type="button"
-                onClick={() => handleTopicClick(topic)}
-                className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors shrink-0 whitespace-nowrap cursor-pointer ${
-                  selectedTopic === topic
-                    ? "bg-neutral-900 text-white shadow-2xs"
-                    : "bg-neutral-100 hover:bg-neutral-200 text-neutral-700"
-                }`}
-              >
-                {topic}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Search Bar if on Search Tab */}
-        {activeTab === "search" && (
-          <form onSubmit={handleSearchSubmit} className="flex gap-2 shrink-0">
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search rooms (e.g. vintage library, modern kitchen, operating room, cathedral)..."
-              className="flex-1 h-10 px-3.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs sm:text-sm text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 transition-all"
-            />
-            <button
-              type="submit"
-              disabled={isLoading || !query.trim()}
-              className="h-10 px-4 bg-neutral-900 text-white rounded-xl text-xs font-semibold hover:bg-neutral-800 disabled:opacity-50 transition-colors shadow-xs shrink-0 cursor-pointer"
-            >
-              Search
-            </button>
-          </form>
-        )}
-
-        {/* Room Gallery Stream with Smooth Scrolling */}
-        {activeTab !== "url" && (
-          <div className="flex-1 overflow-y-auto pr-1">
-            {isLoading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 py-6">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-44 rounded-xl bg-neutral-100 animate-pulse border border-neutral-200/60"
-                  />
-                ))}
-              </div>
-            ) : rooms.length === 0 ? (
-              <div className="p-12 text-center flex flex-col items-center justify-center gap-2">
-                <span className="text-3xl">🏛️</span>
-                <p className="text-sm font-semibold text-neutral-800">No rooms found</p>
-                <p className="text-xs text-muted max-w-xs">
-                  Try scrolling the main feed or searching for general room terms.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5 pb-2">
-                {rooms.map((room) => (
-                  <div
-                    key={room.id}
-                    onClick={() => {
-                      onSelectRoom({ name: room.title, imageUrl: room.imageUrl });
-                      onClose();
-                    }}
-                    className="group relative rounded-xl border border-neutral-200 bg-neutral-50 overflow-hidden hover:border-neutral-900 transition-all duration-200 flex flex-col h-48 shadow-2xs hover:shadow-md cursor-pointer"
-                  >
-                    <div className="flex-1 overflow-hidden relative bg-neutral-900">
-                      <img
-                        src={getSafeImageUrl(room.thumbUrl || room.imageUrl)}
-                        alt={room.title}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                      {room.subreddit && (
-                        <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-xs text-white text-[9px] font-semibold">
-                          {room.subreddit}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="p-2.5 bg-white border-t border-neutral-100 flex flex-col gap-1">
-                      <p className="text-[11px] font-semibold text-neutral-900 truncate leading-tight" title={room.title}>
-                        {room.title}
-                      </p>
-                      <div className="flex items-center justify-between text-[10px] text-neutral-400">
-                        <span>{room.source}</span>
-                        <span className="text-neutral-900 font-semibold group-hover:underline">Select &rarr;</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab 3: Paste Custom Room URL */}
-        {activeTab === "url" && (
-          <form onSubmit={handleUrlSubmit} className="flex-1 flex flex-col gap-5 py-2">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="pasted-room-url" className="text-xs font-semibold text-neutral-700">
-                Room Image Web URL
-              </label>
-              <input
-                id="pasted-room-url"
-                type="url"
-                required
-                value={pastedUrl}
-                onChange={(e) => setPastedUrl(e.target.value)}
-                placeholder="https://i.redd.it/... or direct link to room image"
-                className="w-full h-11 px-3.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs sm:text-sm text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 transition-all"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="pasted-room-name" className="text-xs font-semibold text-neutral-700">
-                Room Name / Spot Name
-              </label>
-              <input
-                id="pasted-room-name"
-                type="text"
-                value={pastedName}
-                onChange={(e) => setPastedName(e.target.value)}
-                placeholder="e.g. Victorian Library Second Floor"
-                className="w-full h-11 px-3.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs sm:text-sm text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 transition-all"
-              />
-            </div>
-
-            {pastedUrl && (
-              <div className="h-40 rounded-xl bg-neutral-50 border border-neutral-200 p-2 flex items-center justify-center overflow-hidden">
-                <img
-                  src={pastedUrl}
-                  alt="Room Preview"
-                  referrerPolicy="no-referrer"
-                  className="max-h-full max-w-full object-contain rounded"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = "none";
-                  }}
+          {/* Tab 1: Reddit Room Feed */}
+          <TabsContent value="reddit" className="flex-1 flex flex-col gap-3 overflow-hidden mt-0">
+            {/* Search Input Bar */}
+            <form onSubmit={handleSearchSubmit} className="flex gap-2 shrink-0">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="Filter rooms by style (e.g. Victorian, Library, Modern, Clinic)..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="pl-9 h-9 text-xs"
                 />
               </div>
-            )}
+              <Button type="submit" disabled={isLoading} size="sm" className="h-9 px-4">
+                {isLoading ? "Loading..." : "Filter"}
+              </Button>
+            </form>
 
-            <button
-              type="submit"
-              disabled={!pastedUrl.trim()}
-              className="mt-auto h-11 bg-neutral-900 text-white rounded-xl text-xs font-semibold hover:bg-neutral-800 active:bg-neutral-950 disabled:opacity-50 transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <span>Use as Palace Room</span>
-              <span>&rarr;</span>
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
+            {/* Quick Topic Chips */}
+            <div className="flex flex-wrap gap-1.5 shrink-0 max-h-16 overflow-y-auto pr-1">
+              {ROOM_SUGGESTIONS.map((topic) => {
+                const isActive = selectedTopic === topic;
+                return (
+                  <button
+                    key={topic}
+                    type="button"
+                    onClick={() => handleTopicClick(topic)}
+                    className={`px-2.5 py-0.5 rounded-md border text-[11px] font-medium transition-colors cursor-pointer select-none ${
+                      isActive
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border bg-secondary/60 hover:bg-secondary text-foreground"
+                    }`}
+                  >
+                    {topic}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Room Grid */}
+            <div className="flex-1 overflow-y-auto pr-1 min-h-[240px]">
+              {isLoading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 py-2">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="h-44 rounded-xl bg-muted/60 animate-pulse border border-border" />
+                  ))}
+                </div>
+              ) : rooms.length === 0 ? (
+                <div className="h-48 flex flex-col items-center justify-center text-center p-4 border border-dashed border-border rounded-xl">
+                  <p className="text-xs font-semibold text-foreground">No rooms match &quot;{query}&quot;</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => {
+                      setQuery("");
+                      setSelectedTopic("inside_mps (All)");
+                      fetchRooms("", "inside_mps");
+                    }}
+                  >
+                    Show All Rooms
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 py-1">
+                  {rooms.map((room) => (
+                    <button
+                      key={room.id}
+                      type="button"
+                      onClick={() => {
+                        onSelectRoom({
+                          name: room.title.split("(")[0].trim(),
+                          imageUrl: room.imageUrl,
+                        });
+                        onClose();
+                      }}
+                      className="group relative rounded-xl border border-border bg-card overflow-hidden hover:border-primary transition-all duration-200 flex flex-col h-44 shadow-2xs hover:shadow-xs cursor-pointer text-left"
+                    >
+                      <div className="flex-1 overflow-hidden relative bg-muted">
+                        <img
+                          src={getSafeImageUrl(room.thumbUrl || room.imageUrl)}
+                          alt={room.title}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                        {room.subreddit && (
+                          <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-xs text-white text-[9px] font-semibold">
+                            {room.subreddit}
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-2 bg-card border-t border-border/40 shrink-0">
+                        <span className="text-[11px] font-semibold text-foreground line-clamp-1 block" title={room.title}>
+                          {room.title}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Tab 2: Custom Room URL */}
+          <TabsContent value="url" className="flex-1 flex flex-col justify-center py-6 mt-0">
+            <form onSubmit={handlePastedUrlSubmit} className="flex flex-col gap-4 max-w-md mx-auto w-full">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="room-url-input" className="text-xs font-semibold text-foreground">
+                  Room Photo Direct URL
+                </label>
+                <Input
+                  id="room-url-input"
+                  type="url"
+                  placeholder="https://example.com/panoramic-living-room.jpg"
+                  value={pastedUrl}
+                  onChange={(e) => setPastedUrl(e.target.value)}
+                  className="h-9 text-xs"
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="room-name-input" className="text-xs font-semibold text-foreground">
+                  Locus Room Name (Optional)
+                </label>
+                <Input
+                  id="room-name-input"
+                  type="text"
+                  placeholder="e.g. My Modern Study Room"
+                  value={pastedName}
+                  onChange={(e) => setPastedName(e.target.value)}
+                  className="h-9 text-xs"
+                />
+              </div>
+
+              <Button type="submit" disabled={!pastedUrl.trim()} className="mt-2">
+                Use Custom Room
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   );
 }

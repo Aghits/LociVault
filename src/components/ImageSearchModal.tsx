@@ -3,6 +3,18 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { SearchResultImage } from "@/app/api/search-images/route";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Search, Link as LinkIcon, Sparkles } from "lucide-react";
 
 interface ImageSearchModalProps {
   isOpen: boolean;
@@ -71,17 +83,6 @@ export default function ImageSearchModal({
     }
   }, [isOpen, hasSearched]);
 
-  // Handle ESC key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    if (isOpen) {
-      window.addEventListener("keydown", handleKeyDown);
-      return () => window.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [isOpen, onClose]);
-
   const handlePastedUrlSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!pastedUrl.trim()) return;
@@ -93,66 +94,41 @@ export default function ImageSearchModal({
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-2xl max-w-3xl w-full p-6 sm:p-7 shadow-2xl border border-neutral-200 flex flex-col gap-5 relative max-h-[88vh] overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-neutral-100 pb-3.5 shrink-0">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
-              <span>🔍</span>
-              <span>Find Online Images</span>
-            </h2>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
-              100% Free Live Web Search
-            </span>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-6 overflow-hidden">
+        <DialogHeader className="shrink-0 pb-2">
+          <div className="flex items-center gap-2">
+            <DialogTitle className="text-base font-bold">Add Mnemonic Image</DialogTitle>
+            <Badge variant="outline" className="text-[10px]">
+              High-Yield
+            </Badge>
           </div>
+          <DialogDescription>
+            Search medical illustrations or paste an image URL to attach to your memory spots.
+          </DialogDescription>
+        </DialogHeader>
 
-          <button
-            onClick={onClose}
-            className="h-8 w-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-600 flex items-center justify-center text-sm font-medium transition-colors"
-            title="Close"
-          >
-            ✕
-          </button>
-        </div>
+        {/* Search Mode Tabs */}
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as "search" | "url")}
+          className="w-full flex-1 flex flex-col overflow-hidden"
+        >
+          <TabsList className="w-full grid grid-cols-2 h-9 mb-3 shrink-0">
+            <TabsTrigger value="search" className="text-xs font-semibold gap-1.5">
+              <Search className="h-3.5 w-3.5" />
+              <span>Search Medical Library</span>
+            </TabsTrigger>
+            <TabsTrigger value="url" className="text-xs font-semibold gap-1.5">
+              <LinkIcon className="h-3.5 w-3.5" />
+              <span>Direct Image URL</span>
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Tab Navigation */}
-        <div className="flex items-center gap-2 border-b border-neutral-100 pb-2 shrink-0">
-          <button
-            onClick={() => setActiveTab("search")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-              activeTab === "search"
-                ? "bg-neutral-900 text-white shadow-xs"
-                : "text-neutral-600 hover:bg-neutral-100"
-            }`}
-          >
-            Live Web Image Search
-          </button>
-          <button
-            onClick={() => setActiveTab("url")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-              activeTab === "url"
-                ? "bg-neutral-900 text-white shadow-xs"
-                : "text-neutral-600 hover:bg-neutral-100"
-            }`}
-          >
-            Paste Image Link (Google Images)
-          </button>
-        </div>
-
-        {/* Tab 1: Live Web Search */}
-        {activeTab === "search" && (
-          <div className="flex-1 flex flex-col gap-4 overflow-hidden">
-            {/* Search Input Bar */}
+          {/* Tab 1: Live Keyword Search */}
+          <TabsContent value="search" className="flex-1 flex flex-col gap-3 overflow-hidden mt-0">
+            {/* Search Bar Input */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -161,38 +137,23 @@ export default function ImageSearchModal({
               className="flex gap-2 shrink-0"
             >
               <div className="relative flex-1">
-                <input
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
                   ref={inputRef}
                   type="text"
+                  placeholder="e.g. Heart, Beta Receptors, Mitochondria, Stethoscope..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search millions of images (e.g. acetylcholine, kidney, skeleton, aspirin)..."
-                  className="w-full h-11 pl-4 pr-10 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 transition-all"
+                  className="pl-9 h-9 text-xs"
                 />
-                {query && (
-                  <button
-                    type="button"
-                    onClick={() => setQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 text-xs p-1"
-                  >
-                    ✕
-                  </button>
-                )}
               </div>
-              <button
-                type="submit"
-                disabled={isLoading || !query.trim()}
-                className="h-11 px-5 bg-neutral-900 text-white rounded-xl text-xs font-semibold hover:bg-neutral-800 active:bg-neutral-950 disabled:opacity-50 transition-colors shadow-xs shrink-0 flex items-center gap-1.5"
-              >
-                {isLoading ? "Searching..." : "Search Web"}
-              </button>
+              <Button type="submit" disabled={isLoading} size="sm" className="h-9 px-4">
+                {isLoading ? "Searching..." : "Search"}
+              </Button>
             </form>
 
-            {/* Quick Suggestion Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 shrink-0 no-scrollbar">
-              <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider shrink-0 mr-1">
-                Quick:
-              </span>
+            {/* Quick Keyword Chips */}
+            <div className="flex flex-wrap gap-1.5 shrink-0">
               {POPULAR_TOPICS.map((topic) => (
                 <button
                   key={topic}
@@ -201,7 +162,7 @@ export default function ImageSearchModal({
                     setQuery(topic);
                     handleSearch(topic);
                   }}
-                  className="px-2.5 py-1 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-[11px] font-medium transition-colors shrink-0 whitespace-nowrap"
+                  className="px-2.5 py-0.5 rounded-md border border-border bg-secondary/60 hover:bg-secondary text-[11px] font-medium text-foreground transition-colors cursor-pointer select-none"
                 >
                   {topic}
                 </button>
@@ -209,137 +170,90 @@ export default function ImageSearchModal({
             </div>
 
             {/* Results Grid */}
-            <div className="flex-1 overflow-y-auto pr-1">
+            <div className="flex-1 overflow-y-auto pr-1 min-h-[220px]">
               {isLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 py-6">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 py-2">
                   {Array.from({ length: 8 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-36 rounded-xl bg-neutral-100 animate-pulse border border-neutral-200/60"
-                    />
+                    <div key={i} className="h-28 rounded-lg bg-muted/60 animate-pulse border border-border" />
                   ))}
                 </div>
-              ) : results.length === 0 && hasSearched ? (
-                <div className="p-12 text-center flex flex-col items-center justify-center gap-2">
-                  <span className="text-3xl">🔍</span>
-                  <p className="text-sm font-semibold text-neutral-800">No images found</p>
-                  <p className="text-xs text-muted max-w-xs">
-                    Try searching for broader medical terms or common object names.
-                  </p>
+              ) : results.length === 0 ? (
+                <div className="h-44 flex flex-col items-center justify-center text-center p-4 border border-dashed border-border rounded-xl">
+                  <p className="text-xs font-semibold text-foreground">No images found for &quot;{query}&quot;</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Try another search term or paste a direct image URL above.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pb-2">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 py-1">
                   {results.map((img) => (
-                    <div
+                    <button
                       key={img.id}
-                      className="group relative rounded-xl border border-neutral-200 bg-neutral-50 overflow-hidden hover:border-neutral-900 transition-all duration-200 flex flex-col justify-between h-40 shadow-2xs hover:shadow-md"
+                      type="button"
+                      onClick={() => {
+                        onSelectImage({ name: img.title || "Mnemonic Image", src: img.thumbUrl || img.fullUrl }, true);
+                        onClose();
+                      }}
+                      className="group relative rounded-lg border border-border bg-card overflow-hidden hover:border-primary transition-all duration-200 flex flex-col h-32 shadow-2xs hover:shadow-xs cursor-pointer text-left"
                     >
-                      <div className="flex-1 overflow-hidden p-2 flex items-center justify-center bg-white">
+                      <div className="flex-1 overflow-hidden relative bg-muted">
                         <img
-                          src={img.thumbUrl}
+                          src={img.thumbUrl || img.fullUrl}
                           alt={img.title}
                           referrerPolicy="no-referrer"
-                          className="max-h-full max-w-full object-contain rounded transition-transform duration-200 group-hover:scale-105"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                           loading="lazy"
                         />
                       </div>
-
-                      <div className="p-2 bg-white border-t border-neutral-100 flex flex-col gap-1">
-                        <p className="text-[11px] font-medium text-neutral-800 truncate leading-tight" title={img.title}>
+                      <div className="p-1.5 bg-card border-t border-border/40 shrink-0">
+                        <span className="text-[10px] font-medium text-foreground line-clamp-1 block" title={img.title}>
                           {img.title}
-                        </p>
-                        <div className="flex items-center justify-between gap-1 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onSelectImage({ name: img.title, src: img.fullUrl || img.thumbUrl }, true);
-                              onClose();
-                            }}
-                            className="flex-1 py-1 px-1.5 bg-neutral-900 text-white rounded text-[10px] font-semibold hover:bg-neutral-800 transition-colors text-center"
-                            title="Place directly in the current locus"
-                          >
-                            + Place
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onSelectImage({ name: img.title, src: img.fullUrl || img.thumbUrl }, false);
-                              onClose();
-                            }}
-                            className="py-1 px-1.5 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 rounded text-[10px] font-medium transition-colors"
-                            title="Add to Mnemonic Library sidebar"
-                          >
-                            Save
-                          </button>
-                        </div>
+                        </span>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
             </div>
-          </div>
-        )}
+          </TabsContent>
 
-        {/* Tab 2: Paste Image Link */}
-        {activeTab === "url" && (
-          <form onSubmit={handlePastedUrlSubmit} className="flex-1 flex flex-col gap-5 py-2">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="pasted-url" className="text-xs font-semibold text-neutral-700">
-                Image Web Address (URL)
-              </label>
-              <input
-                id="pasted-url"
-                type="url"
-                required
-                value={pastedUrl}
-                onChange={(e) => setPastedUrl(e.target.value)}
-                placeholder="https://example.com/image.png or copy image address from Google..."
-                className="w-full h-11 px-3.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs sm:text-sm text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 transition-all"
-              />
-              <p className="text-[11px] text-muted">
-                Tip: On Google Images, right-click any picture and select <strong>&quot;Copy Image Address&quot;</strong>, then paste it here.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="pasted-name" className="text-xs font-semibold text-neutral-700">
-                Mnemonic Name (Optional)
-              </label>
-              <input
-                id="pasted-name"
-                type="text"
-                value={pastedName}
-                onChange={(e) => setPastedName(e.target.value)}
-                placeholder="e.g. Acetylcholine Receptors"
-                className="w-full h-11 px-3.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs sm:text-sm text-neutral-900 placeholder:text-neutral-400 focus:bg-white focus:outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 transition-all"
-              />
-            </div>
-
-            {pastedUrl && (
-              <div className="h-32 rounded-xl bg-neutral-50 border border-neutral-200 p-2 flex items-center justify-center overflow-hidden">
-                <img
-                  src={pastedUrl}
-                  alt="Preview"
-                  className="max-h-full max-w-full object-contain rounded"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = "none";
-                  }}
+          {/* Tab 2: Direct URL Paste */}
+          <TabsContent value="url" className="flex-1 flex flex-col justify-center py-4 mt-0">
+            <form onSubmit={handlePastedUrlSubmit} className="flex flex-col gap-4 max-w-md mx-auto w-full">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="url-input" className="text-xs font-semibold text-foreground">
+                  Image Direct URL
+                </label>
+                <Input
+                  id="url-input"
+                  type="url"
+                  placeholder="https://example.com/medical-diagram.jpg"
+                  value={pastedUrl}
+                  onChange={(e) => setPastedUrl(e.target.value)}
+                  className="h-9 text-xs"
+                  required
                 />
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={!pastedUrl.trim()}
-              className="mt-auto h-11 bg-neutral-900 text-white rounded-xl text-xs font-semibold hover:bg-neutral-800 active:bg-neutral-950 disabled:opacity-50 transition-colors shadow-xs flex items-center justify-center gap-1.5"
-            >
-              <span>Import & Place Image</span>
-              <span>&rarr;</span>
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="url-name" className="text-xs font-semibold text-foreground">
+                  Mnemonic Label (Optional)
+                </label>
+                <Input
+                  id="url-name"
+                  type="text"
+                  placeholder="e.g. Beta-1 Agonist Diagram"
+                  value={pastedName}
+                  onChange={(e) => setPastedName(e.target.value)}
+                  className="h-9 text-xs"
+                />
+              </div>
+
+              <Button type="submit" disabled={!pastedUrl.trim()} className="mt-2">
+                Add Image to Library
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   );
 }
