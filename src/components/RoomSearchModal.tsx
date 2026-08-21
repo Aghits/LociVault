@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { RoomItem } from "@/data/redditRooms";
 import { getSafeImageUrl } from "@/lib/imageUtils";
+import { getPaginatedBatch, getBatchInfo } from "@/lib/paginationUtils";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AnimatedTabs } from "@/components/ui/animated-tabs";
-import { Search, Building2, Link as LinkIcon } from "lucide-react";
+import { Search, Building2, Link as LinkIcon, ChevronLeft, ChevronRight, ArrowDown } from "lucide-react";
 
 interface RoomSearchModalProps {
   isOpen: boolean;
@@ -49,11 +50,16 @@ export default function RoomSearchModal({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState("inside_mps (All)");
 
+  // 2x4 Pagination
+  const [page, setPage] = useState(1);
+  const pageSize = 8;
+
   // URL paste state
   const [pastedUrl, setPastedUrl] = useState("");
   const [pastedName, setPastedName] = useState("");
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLDivElement>(null);
 
   const fetchRooms = async (searchQuery: string = "", feedName: string = "inside_mps") => {
     setIsLoading(true);
@@ -66,6 +72,7 @@ export default function RoomSearchModal({
       if (res.ok) {
         const data = await res.json();
         setRooms(data.rooms || []);
+        setPage(1);
       }
     } catch (err) {
       console.error("Failed to load rooms:", err);
@@ -84,6 +91,7 @@ export default function RoomSearchModal({
 
   const handleTopicClick = (topic: string) => {
     setSelectedTopic(topic);
+    setPage(1);
     if (topic === "inside_mps (All)") {
       setQuery("");
       fetchRooms("", "inside_mps");
@@ -95,6 +103,7 @@ export default function RoomSearchModal({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setPage(1);
     if (!query.trim()) {
       fetchRooms("", "inside_mps");
     } else {
@@ -113,6 +122,9 @@ export default function RoomSearchModal({
     onClose();
   };
 
+  const currentBatch = getPaginatedBatch(rooms, page, pageSize);
+  const batchInfo = getBatchInfo(rooms.length, page, pageSize);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl max-h-[88vh] flex flex-col p-6 overflow-hidden">
@@ -124,7 +136,7 @@ export default function RoomSearchModal({
             </Badge>
           </div>
           <DialogDescription>
-            Select a high-resolution interior room to use as a background for your spatial memory palace.
+            Select a high-resolution interior room to use as a background for your spatial memory palace (2x4 view).
           </DialogDescription>
         </DialogHeader>
 
@@ -192,12 +204,12 @@ export default function RoomSearchModal({
               })}
             </div>
 
-            {/* Room Grid */}
-            <div className="flex-1 overflow-y-auto pr-1 min-h-[240px]">
+            {/* 2x4 Room Grid */}
+            <div ref={galleryRef} className="flex-1 overflow-y-auto pr-1 min-h-[240px] flex flex-col justify-between">
               {isLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 py-2">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-44 rounded-xl bg-muted/60 animate-pulse border border-border" />
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-2">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="h-36 rounded-xl bg-muted/60 animate-pulse border border-border" />
                   ))}
                 </div>
               ) : rooms.length === 0 ? (
@@ -217,42 +229,77 @@ export default function RoomSearchModal({
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 py-1">
-                  {rooms.map((room) => (
-                    <button
-                      key={room.id}
-                      type="button"
-                      onClick={() => {
-                        onSelectRoom({
-                          name: room.title.split("(")[0].trim(),
-                          imageUrl: room.imageUrl,
-                        });
-                        onClose();
-                      }}
-                      className="group relative rounded-xl border border-border bg-card overflow-hidden hover:border-primary transition-all duration-200 flex flex-col h-44 shadow-2xs hover:shadow-xs cursor-pointer text-left"
-                    >
-                      <div className="flex-1 overflow-hidden relative bg-muted">
-                        <img
-                          src={getSafeImageUrl(room.thumbUrl || room.imageUrl)}
-                          alt={room.title}
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          loading="lazy"
-                        />
-                        {room.subreddit && (
-                          <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-xs text-white text-[9px] font-semibold">
-                            {room.subreddit}
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 py-1">
+                    {currentBatch.map((room) => (
+                      <button
+                        key={room.id}
+                        type="button"
+                        onClick={() => {
+                          onSelectRoom({
+                            name: room.title.split("(")[0].trim(),
+                            imageUrl: room.imageUrl,
+                          });
+                          onClose();
+                        }}
+                        className="group relative rounded-xl border border-border bg-card overflow-hidden hover:border-primary transition-all duration-200 flex flex-col h-36 shadow-2xs hover:shadow-xs cursor-pointer text-left"
+                      >
+                        <div className="flex-1 overflow-hidden relative bg-muted">
+                          <img
+                            src={getSafeImageUrl(room.thumbUrl || room.imageUrl)}
+                            alt={room.title}
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                          {room.subreddit && (
+                            <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-xs text-white text-[9px] font-semibold">
+                              {room.subreddit}
+                            </span>
+                          )}
+                        </div>
+                        <div className="p-1.5 bg-card border-t border-border/40 shrink-0">
+                          <span className="text-[10px] font-semibold text-foreground line-clamp-1 block" title={room.title}>
+                            {room.title}
                           </span>
-                        )}
-                      </div>
-                      <div className="p-2 bg-card border-t border-border/40 shrink-0">
-                        <span className="text-[11px] font-semibold text-foreground line-clamp-1 block" title={room.title}>
-                          {room.title}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 2x4 Modal Pagination Footer */}
+                  {batchInfo.totalPages > 1 && (
+                    <div className="flex items-center justify-between border-t border-border pt-3 mt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!batchInfo.hasPrev}
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        className="h-7 px-2.5 text-xs gap-1"
+                      >
+                        <ChevronLeft className="h-3 w-3" />
+                        <span>Prev 8</span>
+                      </Button>
+
+                      <span className="text-xs text-muted-foreground font-mono">
+                        Page {batchInfo.currentPage} of {batchInfo.totalPages} ({batchInfo.startItem}–{batchInfo.endItem})
+                      </span>
+
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        disabled={!batchInfo.hasNext}
+                        onClick={() => setPage((p) => p + 1)}
+                        className="h-7 px-2.5 text-xs gap-1 font-semibold"
+                      >
+                        <span>Next 8</span>
+                        <ChevronRight className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

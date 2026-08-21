@@ -1,14 +1,25 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter as useAppRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { ArrowLeft, ArrowRight, Check, Building2, BookOpen, Layers } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowDown,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  Building2,
+  BookOpen,
+  Layers,
+} from "lucide-react";
 import { LOCI_TEMPLATES } from "@/data/lociTemplates";
 import { RoomItem } from "@/data/redditRooms";
 import { getSafeImageUrl } from "@/lib/imageUtils";
+import { getPaginatedBatch, getBatchInfo } from "@/lib/paginationUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +37,11 @@ export default function NewPalace() {
   const [redditRooms, setRedditRooms] = useState<RoomItem[]>([]);
   const [selectedRooms, setSelectedRooms] = useState<Array<{ name: string; imageUrl: string }>>([]);
   const [isLoadingRooms, setIsLoadingRooms] = useState(false);
+
+  // 2x4 Pagination State (8 rooms per batch)
+  const [page, setPage] = useState(1);
+  const pageSize = 8;
+  const galleryRef = useRef<HTMLDivElement>(null);
 
   // Initial load
   useEffect(() => {
@@ -70,6 +86,30 @@ export default function NewPalace() {
         },
       ]);
     }
+  };
+
+  const handleNextPage = () => {
+    const info = getBatchInfo(redditRooms.length, page, pageSize);
+    if (info.hasNext) {
+      setPage((prev) => prev + 1);
+      setTimeout(() => {
+        galleryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+    }
+  };
+
+  const handlePrevPage = () => {
+    setPage((prev) => Math.max(1, prev - 1));
+    setTimeout(() => {
+      galleryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  };
+
+  const handleGoToPage = (targetPage: number) => {
+    setPage(targetPage);
+    setTimeout(() => {
+      galleryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
   };
 
   const handleGenerate = (e: React.FormEvent) => {
@@ -123,6 +163,9 @@ export default function NewPalace() {
       console.error("Failed to save new palace:", err);
     }
   };
+
+  const currentBatch = getPaginatedBatch(redditRooms, page, pageSize);
+  const batchInfo = getBatchInfo(redditRooms.length, page, pageSize);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-neutral-200 pb-32">
@@ -212,10 +255,10 @@ export default function NewPalace() {
             )}
           </div>
 
-          {/* Section A: Scrollable Reddit inside_mps Gallery */}
+          {/* Section A: 2x4 Reddit inside_mps Gallery with Next Arrow Scroll */}
           {mode === "reddit" && (
-            <div className="flex flex-col gap-4 mt-0">
-              <div className="flex items-center justify-between">
+            <div ref={galleryRef} className="flex flex-col gap-5 mt-0 scroll-mt-20">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
                     <span>Select Your Loci Sequence (</span>
@@ -223,71 +266,146 @@ export default function NewPalace() {
                     <span>selected)</span>
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    Tap any room to toggle it in your spatial walkthrough order.
+                    Tap any room to toggle it in your spatial sequence. Displaying 2x4 layout (8 per page).
                   </p>
                 </div>
+
+                {/* Batch Range Indicator */}
+                {!isLoadingRooms && redditRooms.length > 0 && (
+                  <Badge variant="secondary" className="text-xs font-mono self-start sm:self-auto py-1 px-2.5">
+                    Showing {batchInfo.startItem}–{batchInfo.endItem} of {batchInfo.totalItems} rooms
+                  </Badge>
+                )}
               </div>
 
               {isLoadingRooms ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4">
+                /* 2x4 Skeleton Grid (2 rows x 4 cols = 8 tiles) */
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-2">
                   {Array.from({ length: 8 }).map((_, i) => (
-                    <Card key={i} className="h-48 bg-muted/40 animate-pulse border-border shadow-none" />
+                    <Card key={i} className="h-52 sm:h-56 bg-muted/40 animate-pulse border-border shadow-none" />
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {redditRooms.map((room) => {
-                    const isSelected = selectedRooms.some((r) => r.imageUrl === room.imageUrl);
-                    const selectedIndex = selectedRooms.findIndex((r) => r.imageUrl === room.imageUrl);
+                <>
+                  {/* 2x4 Responsive Room Grid (2 rows x 4 cols on desktop, 2 cols on mobile) */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {currentBatch.map((room) => {
+                      const isSelected = selectedRooms.some((r) => r.imageUrl === room.imageUrl);
+                      const selectedIndex = selectedRooms.findIndex((r) => r.imageUrl === room.imageUrl);
 
-                    return (
-                      <motion.div
-                        key={room.id}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => toggleRoomSelection(room)}
-                        className={`group relative rounded-xl border overflow-hidden transition-all duration-200 cursor-pointer h-52 sm:h-56 flex flex-col justify-end p-3.5 select-none ${
-                          isSelected
-                            ? "border-primary ring-2 ring-primary shadow-md"
-                            : "border-border hover:border-foreground/40 bg-card shadow-2xs hover:shadow-sm"
-                        }`}
+                      return (
+                        <motion.div
+                          key={room.id}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => toggleRoomSelection(room)}
+                          className={`group relative rounded-xl border overflow-hidden transition-all duration-200 cursor-pointer h-52 sm:h-56 flex flex-col justify-end p-3.5 select-none ${
+                            isSelected
+                              ? "border-primary ring-2 ring-primary shadow-md"
+                              : "border-border hover:border-foreground/40 bg-card shadow-2xs hover:shadow-sm"
+                          }`}
+                        >
+                          <img
+                            src={getSafeImageUrl(room.thumbUrl || room.imageUrl)}
+                            alt={room.title}
+                            referrerPolicy="no-referrer"
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            loading="lazy"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none" />
+
+                          {/* Selection Badge with Order Number */}
+                          <div className="absolute top-2.5 right-2.5 z-10">
+                            {isSelected ? (
+                              <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center shadow-md ring-2 ring-card">
+                                {selectedIndex + 1}
+                              </span>
+                            ) : (
+                              <span className="h-6 w-6 rounded-full bg-black/40 text-white/80 text-xs font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs">
+                                +
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Room Title & Subreddit */}
+                          <div className="relative z-10 flex flex-col gap-0.5 pointer-events-none">
+                            {room.subreddit && (
+                              <span className="text-[10px] text-white/70 font-semibold tracking-wider truncate">
+                                {room.subreddit}
+                              </span>
+                            )}
+                            <span className="text-xs font-bold text-white leading-snug line-clamp-2" title={room.title}>
+                              {room.title}
+                            </span>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+
+                  {/* 2x4 Pagination & Next Scroll-Down Navigation Bar */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border border-border bg-card/60 backdrop-blur-xs rounded-xl p-3.5 shadow-2xs mt-2">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!batchInfo.hasPrev}
+                        onClick={handlePrevPage}
+                        className="h-8 px-3 text-xs gap-1"
                       >
-                        <img
-                          src={getSafeImageUrl(room.thumbUrl || room.imageUrl)}
-                          alt={room.title}
-                          referrerPolicy="no-referrer"
-                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          loading="lazy"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none" />
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                        <span>Previous 8</span>
+                      </Button>
 
-                        {/* Selection Badge with Order Number */}
-                        <div className="absolute top-2.5 right-2.5 z-10">
-                          {isSelected ? (
-                            <span className="h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center shadow-md ring-2 ring-card">
-                              {selectedIndex + 1}
-                            </span>
-                          ) : (
-                            <span className="h-6 w-6 rounded-full bg-black/40 text-white/80 text-xs font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs">
-                              +
-                            </span>
-                          )}
-                        </div>
+                      {/* Numeric Page Badges */}
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: batchInfo.totalPages }).map((_, i) => {
+                          const pageNum = i + 1;
+                          const isCurrent = pageNum === page;
+                          return (
+                            <button
+                              key={pageNum}
+                              type="button"
+                              onClick={() => handleGoToPage(pageNum)}
+                              className={`h-7 w-7 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                                isCurrent
+                                  ? "bg-primary text-primary-foreground font-bold shadow-2xs"
+                                  : "hover:bg-secondary text-muted-foreground hover:text-foreground"
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
 
-                        {/* Room Title & Subreddit */}
-                        <div className="relative z-10 flex flex-col gap-0.5 pointer-events-none">
-                          {room.subreddit && (
-                            <span className="text-[10px] text-white/70 font-semibold tracking-wider truncate">
-                              {room.subreddit}
-                            </span>
-                          )}
-                          <span className="text-xs font-bold text-white leading-snug line-clamp-2" title={room.title}>
-                            {room.title}
-                          </span>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
+                    {/* Next Arrow Button (Scrolls down / advances to next 2x4 batch) */}
+                    {batchInfo.hasNext ? (
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        onClick={handleNextPage}
+                        className="h-8 px-4 text-xs font-semibold gap-1.5 shadow-2xs w-full sm:w-auto"
+                      >
+                        <span>Next 8 Rooms</span>
+                        <ArrowDown className="h-3.5 w-3.5" />
+                        <span className="text-[10px] opacity-80">({batchInfo.remainingCount} left)</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleGoToPage(1)}
+                        className="h-8 px-3 text-xs text-muted-foreground w-full sm:w-auto"
+                      >
+                        Back to Top (Page 1)
+                      </Button>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           )}
