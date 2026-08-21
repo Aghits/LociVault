@@ -7,9 +7,11 @@ import Link from "next/link";
 import ImageSearchModal from "@/components/ImageSearchModal";
 import RoomSearchModal from "@/components/RoomSearchModal";
 import { getSafeImageUrl } from "@/lib/imageUtils";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -794,8 +796,9 @@ export default function PalaceEditor() {
                   </Button>
                 </div>
               )}
-              <Badge variant="outline" className="text-[11px] font-medium bg-card">
-                {activeLocus.placements.length} {activeLocus.placements.length === 1 ? "placed" : "placed"}
+              <Badge variant="outline" className="text-[11px] font-medium bg-card gap-1">
+                <AnimatedCounter value={activeLocus.placements.length} />
+                <span>{activeLocus.placements.length === 1 ? "mnemonic" : "mnemonics"} placed</span>
               </Badge>
             </div>
           </div>
@@ -909,8 +912,8 @@ export default function PalaceEditor() {
               <span>Previous</span>
             </Button>
 
-            {/* Locus Carousel Strip */}
-            <div className="flex-1 flex items-center justify-center gap-2 overflow-x-auto px-2">
+            {/* Locus Carousel Strip with Animate-UI sliding indicator */}
+            <div className="flex-1 flex items-center justify-center gap-1.5 overflow-x-auto px-2">
               {palace.loci.map((loc, idx) => {
                 const isActive = activeLocusIndex === idx;
                 return (
@@ -918,12 +921,23 @@ export default function PalaceEditor() {
                     key={loc.id}
                     type="button"
                     onClick={() => setActiveLocusIndex(idx)}
-                    className={`flex items-center gap-2 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer select-none shrink-0 ${
+                    className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer select-none shrink-0 ${
                       isActive
-                        ? "border-primary bg-primary text-primary-foreground shadow-xs"
-                        : "border-border bg-card hover:bg-accent text-foreground"
+                        ? "text-primary-foreground font-bold"
+                        : "text-foreground hover:bg-secondary/60"
                     }`}
                   >
+                    {isActive && (
+                      <motion.div
+                        layoutId="active-locus-pill"
+                        className="absolute inset-0 rounded-lg bg-primary shadow-xs -z-10"
+                        transition={{
+                          type: "spring",
+                          stiffness: 450,
+                          damping: 32,
+                        }}
+                      />
+                    )}
                     <span className="h-4 w-4 rounded-full bg-background/20 text-[10px] flex items-center justify-center">
                       {idx + 1}
                     </span>

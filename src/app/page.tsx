@@ -6,6 +6,7 @@ import { Plus, Trash2, ArrowRight, BookOpen, Layers, Sparkles, Building2 } from 
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
 import {
   Dialog,
   DialogContent,
@@ -127,7 +128,7 @@ export default function Home() {
             <div className="flex items-center gap-2">
               <h2 className="text-base font-bold text-foreground">Your Saved Palaces</h2>
               <Badge variant="secondary" className="text-[11px] font-semibold">
-                {palaces.length}
+                <AnimatedCounter value={palaces.length} />
               </Badge>
             </div>
             {palaces.length > 0 && (
@@ -185,7 +186,8 @@ export default function Home() {
                     <div className="flex items-center gap-1.5 mt-2">
                       <Badge variant="outline" className="text-[10px] gap-1 font-normal py-0">
                         <Layers className="h-2.5 w-2.5" />
-                        {palace.lociCount} {palace.lociCount === 1 ? "room" : "rooms"}
+                        <AnimatedCounter value={palace.lociCount} />
+                        <span>{palace.lociCount === 1 ? "room" : "rooms"}</span>
                       </Badge>
                     </div>
                   </CardHeader>

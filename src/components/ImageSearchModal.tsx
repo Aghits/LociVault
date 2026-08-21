@@ -13,8 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Search, Link as LinkIcon, Sparkles } from "lucide-react";
+import { AnimatedTabs } from "@/components/ui/animated-tabs";
+import { Search, Link as LinkIcon } from "lucide-react";
 
 interface ImageSearchModalProps {
   isOpen: boolean;
@@ -42,7 +42,7 @@ export default function ImageSearchModal({
   onClose,
   onSelectImage,
 }: ImageSearchModalProps) {
-  const [activeTab, setActiveTab] = useState<"search" | "url">("search");
+  const [activeTab, setActiveTab] = useState<string>("search");
   const [query, setQuery] = useState("Heart");
   const [results, setResults] = useState<SearchResultImage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -109,25 +109,31 @@ export default function ImageSearchModal({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Search Mode Tabs */}
-        <Tabs
-          value={activeTab}
-          onValueChange={(v) => setActiveTab(v as "search" | "url")}
-          className="w-full flex-1 flex flex-col overflow-hidden"
-        >
-          <TabsList className="w-full grid grid-cols-2 h-9 mb-3 shrink-0">
-            <TabsTrigger value="search" className="text-xs font-semibold gap-1.5">
-              <Search className="h-3.5 w-3.5" />
-              <span>Search Medical Library</span>
-            </TabsTrigger>
-            <TabsTrigger value="url" className="text-xs font-semibold gap-1.5">
-              <LinkIcon className="h-3.5 w-3.5" />
-              <span>Direct Image URL</span>
-            </TabsTrigger>
-          </TabsList>
+        {/* Animated Tabs Switcher */}
+        <div className="mb-3 shrink-0">
+          <AnimatedTabs
+            tabs={[
+              {
+                id: "search",
+                label: "Search Medical Library",
+                icon: <Search className="h-3.5 w-3.5" />,
+              },
+              {
+                id: "url",
+                label: "Direct Image URL",
+                icon: <LinkIcon className="h-3.5 w-3.5" />,
+              },
+            ]}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+            className="w-full grid grid-cols-2"
+            layoutId="image-modal-tabs"
+          />
+        </div>
 
-          {/* Tab 1: Live Keyword Search */}
-          <TabsContent value="search" className="flex-1 flex flex-col gap-3 overflow-hidden mt-0">
+        {/* Tab 1: Live Keyword Search */}
+        {activeTab === "search" && (
+          <div className="flex-1 flex flex-col gap-3 overflow-hidden mt-0">
             {/* Search Bar Input */}
             <form
               onSubmit={(e) => {
@@ -213,10 +219,12 @@ export default function ImageSearchModal({
                 </div>
               )}
             </div>
-          </TabsContent>
+          </div>
+        )}
 
-          {/* Tab 2: Direct URL Paste */}
-          <TabsContent value="url" className="flex-1 flex flex-col justify-center py-4 mt-0">
+        {/* Tab 2: Direct URL Paste */}
+        {activeTab === "url" && (
+          <div className="flex-1 flex flex-col justify-center py-4 mt-0">
             <form onSubmit={handlePastedUrlSubmit} className="flex flex-col gap-4 max-w-md mx-auto w-full">
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="url-input" className="text-xs font-semibold text-foreground">
@@ -251,8 +259,8 @@ export default function ImageSearchModal({
                 Add Image to Library
               </Button>
             </form>
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -4,7 +4,8 @@
 import React, { useState, useEffect } from "react";
 import { useRouter as useAppRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Check, Sparkles, Building2, BookOpen, Layers } from "lucide-react";
+import { motion } from "motion/react";
+import { ArrowLeft, ArrowRight, Check, Building2, BookOpen, Layers } from "lucide-react";
 import { LOCI_TEMPLATES } from "@/data/lociTemplates";
 import { RoomItem } from "@/data/redditRooms";
 import { getSafeImageUrl } from "@/lib/imageUtils";
@@ -12,11 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { AnimatedTabs } from "@/components/ui/animated-tabs";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
 
 export default function NewPalace() {
   const router = useAppRouter();
-  const [mode, setMode] = useState<"reddit" | "template">("reddit");
+  const [mode, setMode] = useState<string>("reddit");
   const [title, setTitle] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState("clinic");
 
@@ -172,46 +174,53 @@ export default function NewPalace() {
             />
           </div>
 
-          {/* Mode Switcher Tabs */}
-          <Tabs
-            value={mode}
-            onValueChange={(val) => setMode(val as "reddit" | "template")}
-            className="w-full flex flex-col gap-6"
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-3">
-              <TabsList className="h-10 p-1 bg-secondary/80">
-                <TabsTrigger value="reddit" className="gap-2 text-xs font-semibold">
-                  <Building2 className="h-3.5 w-3.5" />
-                  <span>Reddit inside_mps Stream</span>
-                  <Badge variant="outline" className="text-[9px] py-0 px-1 font-normal bg-card">
-                    {redditRooms.length}
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger value="template" className="gap-2 text-xs font-semibold">
-                  <BookOpen className="h-3.5 w-3.5" />
-                  <span>Curated Layouts</span>
-                </TabsTrigger>
-              </TabsList>
+          {/* Mode Switcher Animated Tabs */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-4">
+            <AnimatedTabs
+              tabs={[
+                {
+                  id: "reddit",
+                  label: "Reddit inside_mps Stream",
+                  icon: <Building2 className="h-3.5 w-3.5" />,
+                  badge: (
+                    <Badge variant="outline" className="text-[9px] py-0 px-1 font-normal bg-card">
+                      {redditRooms.length}
+                    </Badge>
+                  ),
+                },
+                {
+                  id: "template",
+                  label: "Curated Layouts",
+                  icon: <BookOpen className="h-3.5 w-3.5" />,
+                },
+              ]}
+              activeTab={mode}
+              onChange={setMode}
+              layoutId="builder-mode-tabs"
+            />
 
-              {mode === "reddit" && selectedRooms.length > 0 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedRooms([])}
-                  className="text-xs text-muted-foreground hover:text-destructive self-start sm:self-auto h-7 px-2"
-                >
-                  Clear Selection ({selectedRooms.length})
-                </Button>
-              )}
-            </div>
+            {mode === "reddit" && selectedRooms.length > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedRooms([])}
+                className="text-xs text-muted-foreground hover:text-destructive self-start sm:self-auto h-7 px-2"
+              >
+                Clear Selection (<AnimatedCounter value={selectedRooms.length} />)
+              </Button>
+            )}
+          </div>
 
-            {/* Section A: Scrollable Reddit inside_mps Gallery */}
-            <TabsContent value="reddit" className="flex flex-col gap-4 mt-0">
+          {/* Section A: Scrollable Reddit inside_mps Gallery */}
+          {mode === "reddit" && (
+            <div className="flex flex-col gap-4 mt-0">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-bold text-foreground">
-                    Select Your Loci Sequence ({selectedRooms.length} selected)
+                  <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                    <span>Select Your Loci Sequence (</span>
+                    <AnimatedCounter value={selectedRooms.length} className="font-bold text-primary" />
+                    <span>selected)</span>
                   </h2>
                   <p className="text-xs text-muted-foreground">
                     Tap any room to toggle it in your spatial walkthrough order.
@@ -232,12 +241,13 @@ export default function NewPalace() {
                     const selectedIndex = selectedRooms.findIndex((r) => r.imageUrl === room.imageUrl);
 
                     return (
-                      <div
+                      <motion.div
                         key={room.id}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => toggleRoomSelection(room)}
                         className={`group relative rounded-xl border overflow-hidden transition-all duration-200 cursor-pointer h-52 sm:h-56 flex flex-col justify-end p-3.5 select-none ${
                           isSelected
-                            ? "border-primary ring-2 ring-primary shadow-md scale-[1.01]"
+                            ? "border-primary ring-2 ring-primary shadow-md"
                             : "border-border hover:border-foreground/40 bg-card shadow-2xs hover:shadow-sm"
                         }`}
                       >
@@ -274,15 +284,17 @@ export default function NewPalace() {
                             {room.title}
                           </span>
                         </div>
-                      </div>
+                      </motion.div>
                     );
                   })}
                 </div>
               )}
-            </TabsContent>
+            </div>
+          )}
 
-            {/* Section B: Curated Classic Themes */}
-            <TabsContent value="template" className="grid gap-4 sm:grid-cols-2 mt-0">
+          {/* Section B: Curated Classic Themes */}
+          {mode === "template" && (
+            <div className="grid gap-4 sm:grid-cols-2 mt-0">
               {LOCI_TEMPLATES.map((tpl) => {
                 const isSelected = selectedTemplateId === tpl.id;
                 return (
@@ -316,15 +328,22 @@ export default function NewPalace() {
                   </Card>
                 );
               })}
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
 
           {/* Sticky Bottom Dock */}
           <div className="fixed bottom-0 left-0 right-0 z-40 bg-card/90 backdrop-blur-md border-t border-border p-4 shadow-lg">
             <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-foreground">
-                  {mode === "reddit" ? `${selectedRooms.length} Locations Selected` : "Curated Preset Template"}
+                <span className="text-xs font-bold text-foreground flex items-center gap-1">
+                  {mode === "reddit" ? (
+                    <>
+                      <AnimatedCounter value={selectedRooms.length} />
+                      <span>Locations Selected</span>
+                    </>
+                  ) : (
+                    <span>Curated Preset Template</span>
+                  )}
                 </span>
                 {mode === "reddit" && selectedRooms.length === 0 && (
                   <Badge variant="destructive" className="text-[10px]">

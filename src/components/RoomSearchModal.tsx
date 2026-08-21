@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { AnimatedTabs } from "@/components/ui/animated-tabs";
 import { Search, Building2, Link as LinkIcon } from "lucide-react";
 
 interface RoomSearchModalProps {
@@ -43,7 +43,7 @@ export default function RoomSearchModal({
   onSelectRoom,
   title = "Choose Memory Palace Room",
 }: RoomSearchModalProps) {
-  const [activeTab, setActiveTab] = useState<"reddit" | "url">("reddit");
+  const [activeTab, setActiveTab] = useState<string>("reddit");
   const [query, setQuery] = useState("");
   const [rooms, setRooms] = useState<RoomItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -128,25 +128,31 @@ export default function RoomSearchModal({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Mode Tabs */}
-        <Tabs
-          value={activeTab}
-          onValueChange={(v) => setActiveTab(v as "reddit" | "url")}
-          className="w-full flex-1 flex flex-col overflow-hidden"
-        >
-          <TabsList className="w-full grid grid-cols-2 h-9 mb-3 shrink-0">
-            <TabsTrigger value="reddit" className="text-xs font-semibold gap-1.5">
-              <Building2 className="h-3.5 w-3.5" />
-              <span>Reddit inside_mps Library</span>
-            </TabsTrigger>
-            <TabsTrigger value="url" className="text-xs font-semibold gap-1.5">
-              <LinkIcon className="h-3.5 w-3.5" />
-              <span>Custom Room URL</span>
-            </TabsTrigger>
-          </TabsList>
+        {/* Animated Tabs Switcher */}
+        <div className="mb-3 shrink-0">
+          <AnimatedTabs
+            tabs={[
+              {
+                id: "reddit",
+                label: "Reddit inside_mps Library",
+                icon: <Building2 className="h-3.5 w-3.5" />,
+              },
+              {
+                id: "url",
+                label: "Custom Room URL",
+                icon: <LinkIcon className="h-3.5 w-3.5" />,
+              },
+            ]}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+            className="w-full grid grid-cols-2"
+            layoutId="room-modal-tabs"
+          />
+        </div>
 
-          {/* Tab 1: Reddit Room Feed */}
-          <TabsContent value="reddit" className="flex-1 flex flex-col gap-3 overflow-hidden mt-0">
+        {/* Tab 1: Reddit Room Feed */}
+        {activeTab === "reddit" && (
+          <div className="flex-1 flex flex-col gap-3 overflow-hidden mt-0">
             {/* Search Input Bar */}
             <form onSubmit={handleSearchSubmit} className="flex gap-2 shrink-0">
               <div className="relative flex-1">
@@ -249,10 +255,12 @@ export default function RoomSearchModal({
                 </div>
               )}
             </div>
-          </TabsContent>
+          </div>
+        )}
 
-          {/* Tab 2: Custom Room URL */}
-          <TabsContent value="url" className="flex-1 flex flex-col justify-center py-6 mt-0">
+        {/* Tab 2: Custom Room URL */}
+        {activeTab === "url" && (
+          <div className="flex-1 flex flex-col justify-center py-6 mt-0">
             <form onSubmit={handlePastedUrlSubmit} className="flex flex-col gap-4 max-w-md mx-auto w-full">
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="room-url-input" className="text-xs font-semibold text-foreground">
@@ -287,8 +295,8 @@ export default function RoomSearchModal({
                 Use Custom Room
               </Button>
             </form>
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
